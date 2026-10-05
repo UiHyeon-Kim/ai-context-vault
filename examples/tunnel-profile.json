@@ -1,0 +1,24 @@
+{
+  "config_version": 1,
+  "admin_ui": { "open_browser": false },
+  "control_plane": {
+    "api_key": "file:/ABSOLUTE/PATH/runtime-api-key",
+    "base_url": "https://api.openai.com",
+    "tunnel_id": "REPLACE_WITH_TUNNEL_ID"
+  },
+  "health": {
+    "listen_addr": "127.0.0.1:0",
+    "url_file": "/ABSOLUTE/PATH/ai-vault.url"
+  },
+  "log": {
+    "file": "/ABSOLUTE/PATH/ai-vault.log",
+    "format": "json",
+    "level": "info"
+  },
+  "mcp": {
+    "commands": [{
+      "channel": "main",
+      "command": "/ABSOLUTE/PATH/basic-memory mcp --project ai-vault"
+    }]
+  }
+}

@@ -1,0 +1,5 @@
+[mcp_servers.basic-memory]
+command = "/ABSOLUTE/PATH/basic-memory"
+args = ["mcp", "--project", "ai-vault"]
+startup_timeout_sec = 120
+tool_timeout_sec = 120

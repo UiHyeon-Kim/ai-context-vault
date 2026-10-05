@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "basic-memory": {
+      "command": "/ABSOLUTE/PATH/basic-memory",
+      "args": ["mcp", "--project", "ai-vault"]
+    }
+  }
+}
