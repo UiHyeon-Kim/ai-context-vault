@@ -1,5 +1,6 @@
 ---
 type: handoff
+context_role: current
 verification: unverified
 authority: derived
 verify-before-change: true
@@ -7,7 +8,9 @@ verify-before-change: true
 
 # 작업 인계
 
-이 파일은 빈 양식이며 실제 작업 결과가 아님
+이 파일은 현재 요약용 빈 양식이며 실제 작업 결과가 아님
+사용할 때 편집일 updated와 실제 확인일을 구별해 기록함
+대략 1~2천 자를 목표로 하되 중요한 조건·실패·미해결 사항을 길이 때문에 생략하지 않음
 
 ## 목표와 범위
 
@@ -27,6 +30,7 @@ verify-before-change: true
 
 ## 남은 질문과 다음 할 일
 
-## 변경 기록
+## 필요한 상세 이력
 
-수정 후 재조회 결과는 실제 확인한 다음 기록
+긴 날짜별 로그는 같은 분류의 이력/주제/에 [상세 이력 양식](history.md)으로 별도 작성하고 실제 생성한 경로를 연결함
+수정 후 재조회 결과는 실제 확인한 다음 기록하며 요약에 실행 로그를 계속 누적하지 않음
