@@ -33,6 +33,7 @@ cp -R /ABSOLUTE/PATH/AI-Vault "/ABSOLUTE/PATH/backups/AI-Vault-$(date +%Y%m%d-%H
 1. 업데이트 전에 위 백업을 만들고 현재 버전을 기록함: `basic-memory --version`
 2. Basic Memory를 설치 때 쓴 방식으로 업데이트함 (`basic-memory update`는 설치 방식이 지원할 때만 동작하며 이 저장소는 실행하지 않았음)
 3. 업데이트 후 `vault_doctor.py`와 [연결 시험](../prompts/roundtrip-test.md)을 다시 실행함. 이전 버전의 검증 결과를 새 버전에 그대로 적용하지 않음
+   `scripts/demo_roundtrip.py`와 `scripts/mcp_stdio_check.py`도 다시 돌리면 문서화한 동작이 새 버전에서도 유지되는지 격리 환경에서 확인할 수 있음. 실제로 0.23.2는 임베딩 모델을 받지 못할 때 `reindex`의 종료 코드가 0.22.1과 달랐음 ([기능 상태](status.md))
 4. 저장소의 문서·스크립트를 갱신할 때는 `git pull`로 가져오고, 로컬에서 바꾼 설정 사본은 저장소 밖에 두면 충돌하지 않음
 
 ## 제거 (연결만 끊기)

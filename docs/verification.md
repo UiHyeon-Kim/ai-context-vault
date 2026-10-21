@@ -65,6 +65,7 @@ README 첫 읽기는 HTTP 409 / MCP 서버 초기화 필요 오류가 발생했�
 |---|---|---|
 | 단위 테스트 | `python3 -m unittest discover -s tests` | 47개 통과 (Python 3.11·3.12·3.14·3.15). 깨진 링크·앵커, 개인 경로 같은 잘못된 입력을 넣어 실패를 잡는지도 확인. 레거시 인코딩(ISO8859-1)과 CRLF 체크아웃을 흉내 낸 로컬 시험도 통과 |
 | GitHub Actions | `.github/workflows/ci.yml` — ubuntu-latest·windows-latest × Python 3.11·3.13, `unittest discover` | PR #2의 CI 실행에서 4개 잡 모두 통과. Basic Memory를 설치하는 시험(`demo_roundtrip.py`, `mcp_stdio_check.py`)은 CI에서 실행하지 않음 |
+| GitHub Actions 연동 시험 | `integration` 잡: Basic Memory를 pip로 설치한 뒤 `demo_roundtrip.py`(온라인·`--offline`)와 `mcp_stdio_check.py` 실행 | Ubuntu·Windows + 0.22.1 모두 15/15, 14통과+경고 1, 11/11. 최신 버전(0.23.2, 실험적)은 CI 첫 실행의 오프라인 흉내 단계에서 실패해 원인(임베딩 실패 시 reindex 종료 코드 차이, mcp SDK 2.x의 필드명 is_error)을 찾아 스크립트를 고쳤고, 고친 뒤 CI에서 같은 수치(15/15, 14+경고 1, 11/11)로 통과 |
 | 첫 사용 흐름 재현 | `python3 scripts/demo_roundtrip.py` | 15/15 (약 37초): 등록 → 사전 검사 → 색인 → 한글 텍스트 검색 → 현재 요약/이력 필터 → 기본 검색 → 읽기 → 작성·재조회 → 수정·재조회 → 파일 일치 → 백업 리허설 |
 | 오프라인 시뮬레이션 | `python3 scripts/demo_roundtrip.py --offline` | 14 통과 / 경고 1(기본 hybrid 검색 0건) / 실패 0 |
 | MCP stdio 계층 | `python3 scripts/mcp_stdio_check.py` (필요하면 Basic Memory의 Python으로 자동 재실행) | 11/11: 도구 23개, 한글 텍스트 검색, `metadata_filters`+`page_size=3` 레시피, 이력 필터, 기본 검색, 읽기, 작성·수정·재조회, 실패 응답 확인 |
@@ -119,10 +120,11 @@ PR #2를 여러 관점(줄 단위, 삭제된 동작, 호출 관계, 언어 함�
 - `project remove`는 `--delete-notes` 없이는 파일을 남기고, 기본 프로젝트는 지우지 못함
 - 노트를 삭제하고 `reindex --search --full` 하면 검색에서 사라지고, 복구 후 `reindex`하면 다시 검색됨
 - 첫 실행에서 임베딩 모델을 Hugging Face에서 내려받는 출력이 있었음
+- 최신 버전 0.23.2(PyPI 최신, 같은 날 임시 가상환경에서 확인): 서버 동작(`Edit Failed` 응답이 `isError: false`, 없는 노트 `append`는 새 노트 생성, `text` 검색 필터)은 0.22.1과 같음. 다른 점은 둘: 임베딩 모델을 받지 못하면 `reindex --full`이 `Reindex failed: all vector embedding attempts failed.`와 함께 종료 코드 1로 끝나고(0.22.1은 0, 텍스트 색인은 둘 다 완성), 함께 설치되는 `mcp` SDK 2.x는 도구 결과 필드가 `is_error`임. 시험 스크립트는 두 가지를 모두 처리하도록 고쳤음
 
 미검증 (이번 작업에서 하지 않음)
 - ChatGPT·dots·Codex·Claude 채팅에서 AI가 새 인계 양식과 지침을 실제로 따르는지 (확인 절차와 결과 기록 양식: [채팅 검증](chat-verification.md))
-- Windows·Linux에서의 Basic Memory 연동과 실사용(단위 테스트는 CI 통과), Basic Memory 0.22.1 이외 버전, 새 컴퓨터에서의 처음부터 설치
+- Windows·Linux에서의 클라이언트 연결과 실사용(단위 테스트와 Basic Memory 연동 시험은 CI 통과), 새 컴퓨터에서의 처음부터 설치(깨끗한 클론과 CI 러너의 새 설치까지만 확인)
 - `claude mcp add`·`codex mcp add` 실행, 병합 도구를 실제 연결 설정에 적용하는 것, 실제 개인 Vault의 색인 변경
 - 터널·LaunchAgent·키는 건드리지 않았고 재검증하지 않음 (파일 존재·형식·경로만 읽기 전용으로 점검)
 - 모델 다운로드 외에 노트 내용이 네트워크로 나가는지(트래픽 미측정)
