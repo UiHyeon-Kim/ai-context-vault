@@ -32,3 +32,36 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Unit tests
         run: python -m unittest discover -s tests -v
+
+  integration:
+    # Basic Memory를 실제로 설치해 scripts/demo_roundtrip.py와 scripts/mcp_stdio_check.py를 실행한다.
+    # 검증한 버전(0.22.1, Ubuntu)은 필수다. Windows와 최신 버전은 실험적이라 실패해도 워크플로 전체를 실패로 만들지 않는다
+    # (결과는 잡 로그와 docs/status.md에 사실대로 기록한다).
+    name: integration (${{ matrix.os }}, basic-memory ${{ matrix.bm }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, bm: "0.22.1", experimental: false }
+          - { os: windows-latest, bm: "0.22.1", experimental: true }
+          - { os: ubuntu-latest, bm: "latest", experimental: true }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install Basic Memory
+        shell: bash
+        run: |
+          if [ "${{ matrix.bm }}" = "latest" ]; then spec="basic-memory"; else spec="basic-memory==${{ matrix.bm }}"; fi
+          python -m pip install "$spec"
+          basic-memory --version
+      - name: 격리 재현 (데모 Vault)
+        run: python scripts/demo_roundtrip.py
+      - name: 격리 재현 (임베딩 모델을 받을 수 없는 환경 흉내)
+        run: python scripts/demo_roundtrip.py --offline
+      - name: MCP stdio 계층
+        run: python scripts/mcp_stdio_check.py

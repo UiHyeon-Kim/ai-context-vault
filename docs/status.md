@@ -44,7 +44,7 @@
 | Python 3.11 / 3.13 (Ubuntu·Windows, GitHub Actions) | 단위 테스트 통과 (2026-10-22 PR #2의 CI 실행, 4개 잡) |
 | Windows | 단위 테스트는 GitHub Actions(windows-latest)에서 통과. **Basic Memory 연동(`demo_roundtrip.py`·`mcp_stdio_check.py`)과 실제 사용은 미검증**. 스크립트는 UTF-8 출력과 CRLF·Windows 경로 표기를 방어적으로 다룸. 문서의 셸 예시는 POSIX 문법 |
 | Linux | 단위 테스트는 GitHub Actions(ubuntu-latest)에서 통과. **Basic Memory 연동과 실제 사용은 미검증** |
-| ChatGPT / Codex / Claude 채팅에서의 지침 준수 | 2026-10 개인 환경 기록만 있음. 이번 작업에서는 채팅 연결을 새로 확인하지 않음 |
+| ChatGPT / Codex / Claude 채팅에서의 지침 준수 | 2026-10 개인 환경 기록만 있음. 이번 작업에서는 채팅 연결을 새로 확인하지 않음 (작업 환경의 `claude` CLI가 로그인되어 있지 않아 새 세션 시험도 못 함). 확인 절차: [채팅 검증](chat-verification.md) |
 
 ## 알려진 문제와 우선순위
 

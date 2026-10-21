@@ -515,6 +515,24 @@ class RepoConsistencyTests(unittest.TestCase):
             self.assertIn("보류·금지", text, rel)
         self.assertIn("search_type", (ROOT / "prompts/roundtrip-test.md").read_text(encoding="utf-8"))  # 검색이 비었을 때의 text 대체
 
+    def test_chat_verification_prompt_does_not_name_the_sections_it_tests(self):
+        doc = (ROOT / "docs/chat-verification.md").read_text(encoding="utf-8")
+        section = doc.split("### 프롬프트", 1)[1].split("### 판정표", 1)[0]
+        prompt = "\n".join(line for line in section.splitlines() if line.startswith(">"))  # 인용된 프롬프트 본문만
+        self.assertIn("Sample Notes App", prompt)
+        for name in ("현재 상태", "보류·금지"):
+            self.assertNotIn(name, prompt, "프롬프트가 구획 이름을 알려 주면 규칙을 따랐는지 구별할 수 없다")
+        table = doc.split("### 판정표", 1)[1].split("## 시험 2", 1)[0]
+        self.assertEqual(len(re.findall(r"^\| [1-8] \|", table, flags=re.M)), 8)
+
+    def test_ci_installs_the_basic_memory_version_the_docs_say_was_verified(self):
+        ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        pinned = set(re.findall(r'bm: "(\d+\.\d+\.\d+)"', ci))
+        self.assertEqual(len(pinned), 1, pinned)
+        version = pinned.pop()
+        for rel in ("README.md", "docs/status.md"):
+            self.assertIn(f"Basic Memory {version}", (ROOT / rel).read_text(encoding="utf-8"), rel)
+
     def test_license_is_mit_and_linked_from_readme(self):
         lic = (ROOT / "LICENSE").read_text(encoding="utf-8")
         self.assertTrue(lic.startswith("MIT License"))
