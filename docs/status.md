@@ -29,6 +29,7 @@
 | Codex·Claude Code·Claude Desktop·ChatGPT·dots 연결 | 예시 구현됨 | 2026-10-04~05 개인 환경에서 실제 채팅 검증 (`verification.md`) | 이번 작업에서 재실행하지 않음 |
 | MCP stdio 계층 (도구 목록·한글 검색·필터·읽기·쓰기·수정·재조회) | — | 실제 검증됨 (2026-10-22, 임시 데모, 11/11) | 채팅 속 AI의 동작과 별개 |
 | GitHub Actions 단위 테스트 | 구현됨 (`.github/workflows/ci.yml`: Ubuntu·Windows × Python 3.11·3.13) | 실제 검증됨: 2026-10-22 첫 실행 4개 잡 통과. macOS는 러너 비용 때문에 제외하고 로컬에서 검증 | Basic Memory를 설치하는 시험은 CI에서 실행하지 않음 |
+| Basic Memory 연동 CI (`integration` 잡) | 구현됨 (`.github/workflows/ci.yml`: Ubuntu+0.22.1 필수, Windows+0.22.1·Ubuntu+최신 버전 실험적) | 실제 검증됨: 2026-10-22 Ubuntu·Windows + 0.22.1 모두 격리 재현 15/15, 오프라인 흉내 14통과+경고 1, MCP 계층 11/11. 최신 버전(0.23.2, 실험적)은 CI 첫 실행의 오프라인 흉내 단계에서 실패해 원인(임베딩 실패 시 reindex 종료 코드 차이, mcp SDK 2.x의 필드명 is_error)을 찾아 스크립트를 고쳤고, 고친 뒤 CI에서 같은 수치(15/15, 14+경고 1, 11/11)로 통과 | Codex·Claude·ChatGPT 클라이언트 연결과 실사용은 CI가 확인하지 않음 |
 | 첫 사용자 설치 흐름(`quickstart.md`) | 구현됨 | 일부 검증: 등록→검사→병합→재조회를 임시 환경에서 실행. 새 컴퓨터에서의 처음부터 설치는 미검증 | |
 | 백업·복구·제거 안내 | 문서 | 일부 검증: 설정 백업 복구, 노트 삭제 후 복구·`reindex`, 프로젝트 해제 시 파일 보존을 임시 환경에서 확인. 업데이트 절차는 문서만 있음 | |
 | macOS LaunchAgent 예시 | 구현됨 | 2026-10 개인 환경에서 등록·재실행 확인. 실제 재부팅은 미수행 | |
@@ -42,8 +43,9 @@
 | macOS 27.0.1 + Basic Memory 0.22.1 | 스크립트·데모·MCP stdio 직접 검증 |
 | Python 3.11 / 3.12 / 3.14 / 3.15 (macOS) | 단위 테스트 47개 통과. 3.9(검증한 Mac의 기본 `/usr/bin/python3`)에서는 스크립트가 안내 메시지를 내고 멈춤 |
 | Python 3.11 / 3.13 (Ubuntu·Windows, GitHub Actions) | 단위 테스트 통과 (2026-10-22 PR #2의 CI 실행, 4개 잡) |
-| Windows | 단위 테스트는 GitHub Actions(windows-latest)에서 통과. **Basic Memory 연동(`demo_roundtrip.py`·`mcp_stdio_check.py`)과 실제 사용은 미검증**. 스크립트는 UTF-8 출력과 CRLF·Windows 경로 표기를 방어적으로 다룸. 문서의 셸 예시는 POSIX 문법 |
-| Linux | 단위 테스트는 GitHub Actions(ubuntu-latest)에서 통과. **Basic Memory 연동과 실제 사용은 미검증** |
+| Windows | 단위 테스트와 Basic Memory 0.22.1 연동 시험(`demo_roundtrip.py`·`mcp_stdio_check.py`)이 GitHub Actions(windows-latest, 실험적 잡)에서 통과. **클라이언트 연결(Codex·Claude·ChatGPT)과 실제 사용은 미검증**. 스크립트는 UTF-8 출력과 CRLF·Windows 경로 표기를 방어적으로 다룸. 문서의 셸 예시는 POSIX 문법 |
+| Linux | 단위 테스트와 Basic Memory 0.22.1 연동 시험이 GitHub Actions(ubuntu-latest)에서 통과. **클라이언트 연결과 실제 사용은 미검증** |
+| Basic Memory 최신 버전 (0.23.2) | 로컬(임시 가상환경)에서 격리 재현·MCP 계층 시험 통과. 0.22.1과 다른 점은 아래 ‘알려진 문제’ 참고 |
 | ChatGPT / Codex / Claude 채팅에서의 지침 준수 | 2026-10 개인 환경 기록만 있음. 이번 작업에서는 채팅 연결을 새로 확인하지 않음 (작업 환경의 `claude` CLI가 로그인되어 있지 않아 새 세션 시험도 못 함). 확인 절차: [채팅 검증](chat-verification.md) |
 
 ## 알려진 문제와 우선순위
@@ -59,5 +61,6 @@
 | 중간 | 프로젝트 ID와 폴더·표시 이름 혼동 | 잘못된 프로젝트 조회 | `naming.md`, doctor가 불일치 검출. 문서의 표시 이름은 `AI-Vault`로 통일함 (2026-10-22). 커넥터 이름을 실제로 바꾸면 문서 호칭도 함께 바꿔야 함 |
 | 중간 | 구현 완료와 검증 완료 혼동 | 미검증을 완료로 인계 | 인계 양식에 단계 표 추가 |
 | 중간 | `~/.claude.json`은 앱이 계속 쓰는 상태 파일 | 통째 재작성 시 동시 기록 덮어쓰기 위험 | 병합 도구가 적용을 거부하고 `claude mcp add`를 안내 |
+| 중간 | Basic Memory 버전에 따라 동작이 다름: 0.23.2는 임베딩 모델을 받지 못하면 `reindex --full`이 `Reindex failed`와 종료 코드 1로 끝남(0.22.1은 0, 텍스트 색인은 둘 다 완성). 새 `mcp` SDK(2.x)는 도구 결과 필드가 `isError`가 아니라 `is_error` | 자동화·스크립트가 업그레이드 뒤 오탐 실패 | 시험 스크립트가 두 버전을 모두 처리하고 판정 로직을 단위 테스트로 고정. CI의 최신 버전 잡이 이후 변화를 감시. 서버 동작(`Edit Failed` 응답, 없는 노트 `append`)은 두 버전이 같음 |
 | 낮음 | 한글 제목의 permalink가 로마자로 변환 | 링크 가독성 | 문서화 |
 | 낮음 | 첫 실행 시 임베딩 모델 다운로드 | 오프라인·차단 환경에서 지연·경고 | 문서화 |
