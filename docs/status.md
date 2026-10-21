@@ -28,6 +28,7 @@
 | 설정 병합 도구 | 구현됨 | 실제 검증됨: 임시 파일에서 미리보기·적용·재실행·충돌·손상/비정상 구조·백업 복구·심볼릭 링크·CRLF·BOM | 실제 사용자 설정 파일에는 적용하지 않음 |
 | Codex·Claude Code·Claude Desktop·ChatGPT·dots 연결 | 예시 구현됨 | 2026-10-04~05 개인 환경에서 실제 채팅 검증 (`verification.md`) | 이번 작업에서 재실행하지 않음 |
 | MCP stdio 계층 (도구 목록·한글 검색·필터·읽기·쓰기·수정·재조회) | — | 실제 검증됨 (2026-10-22, 임시 데모, 11/11) | 채팅 속 AI의 동작과 별개 |
+| GitHub Actions 단위 테스트 | 구현됨 (`.github/workflows/ci.yml`: Ubuntu·Windows × Python 3.11·3.13) | 실제 검증됨: 2026-10-22 첫 실행 4개 잡 통과. macOS는 러너 비용 때문에 제외하고 로컬에서 검증 | Basic Memory를 설치하는 시험은 CI에서 실행하지 않음 |
 | 첫 사용자 설치 흐름(`quickstart.md`) | 구현됨 | 일부 검증: 등록→검사→병합→재조회를 임시 환경에서 실행. 새 컴퓨터에서의 처음부터 설치는 미검증 | |
 | 백업·복구·제거 안내 | 문서 | 일부 검증: 설정 백업 복구, 노트 삭제 후 복구·`reindex`, 프로젝트 해제 시 파일 보존을 임시 환경에서 확인. 업데이트 절차는 문서만 있음 | |
 | macOS LaunchAgent 예시 | 구현됨 | 2026-10 개인 환경에서 등록·재실행 확인. 실제 재부팅은 미수행 | |
@@ -39,9 +40,10 @@
 | 환경 | 상태 |
 |---|---|
 | macOS (Darwin 27.0) + Basic Memory 0.22.1 | 스크립트·데모·MCP stdio 직접 검증 |
-| Python 3.11 / 3.12 / 3.14 / 3.15 | 단위 테스트 32개 통과. 3.9(macOS 기본 `/usr/bin/python3`)에서는 스크립트가 안내 메시지를 내고 멈춤 |
-| Windows | **미검증**. 스크립트는 `pathlib`·`tomllib`만 쓰고 UTF-8 출력과 CRLF·Windows 경로 표기를 방어적으로 다뤘지만 실행해 보지 않았음. 문서의 셸 예시는 POSIX 문법 |
-| Linux | **미검증** |
+| Python 3.11 / 3.12 / 3.14 / 3.15 (macOS) | 단위 테스트 34개 통과. 3.9(macOS 기본 `/usr/bin/python3`)에서는 스크립트가 안내 메시지를 내고 멈춤 |
+| Python 3.11 / 3.13 (Ubuntu·Windows, GitHub Actions) | 단위 테스트 34개 통과 (2026-10-22 첫 실행, 4개 잡) |
+| Windows | 단위 테스트는 GitHub Actions(windows-latest)에서 통과. **Basic Memory 연동(`demo_roundtrip.py`·`mcp_stdio_check.py`)과 실제 사용은 미검증**. 스크립트는 UTF-8 출력과 CRLF·Windows 경로 표기를 방어적으로 다룸. 문서의 셸 예시는 POSIX 문법 |
+| Linux | 단위 테스트는 GitHub Actions(ubuntu-latest)에서 통과. **Basic Memory 연동과 실제 사용은 미검증** |
 | ChatGPT / Codex / Claude 채팅에서의 지침 준수 | 2026-10 개인 환경 기록만 있음. 이번 작업에서는 채팅 연결을 새로 확인하지 않음 |
 
 ## 알려진 문제와 우선순위

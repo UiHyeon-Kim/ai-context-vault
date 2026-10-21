@@ -1,7 +1,7 @@
 # 연결 설정 예시
 
 검증 환경은 macOS(2026-10 기준 Darwin 27), Basic Memory 0.22.1, tunnel-client 0.0.15였음
-Windows·Linux는 직접 검증하지 않았음. Basic Memory·MCP 부분은 OS 공통 개념이지만 경로 표기와 명령은 환경별로 확인해야 함 ([지원 환경 표](status.md#지원-환경))
+Windows·Linux는 단위 테스트만 CI에서 확인했고 Basic Memory·MCP 연동과 실사용은 직접 검증하지 않았음. Basic Memory·MCP 부분은 OS 공통 개념이지만 경로 표기와 명령은 환경별로 확인해야 함 ([지원 환경 표](status.md#지원-환경))
 아래는 기존 정상 구성을 옮기기 위한 예시이며 다른 OS·버전에서 자동 설치까지 검증한 패키지가 아님
 기존 사용자 설정 파일을 예시 파일로 통째로 덮어쓰지 않고 필요한 항목만 병합함
 

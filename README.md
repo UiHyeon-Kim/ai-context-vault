@@ -45,7 +45,7 @@ Claude Code는 `claude mcp add --scope user …`, Codex는 `codex mcp add …` �
 그다음 새 채팅에서 [연결 시험 문구](prompts/roundtrip-test.md)로 읽기 → 검색 → 기록 → 재조회를 확인한다
 먼저 연습하려면 [데모 Vault](examples/demo-vault/README.md)를 복사해 등록한다 (가상 데이터)
 
-> 지원 환경: macOS에서 직접 검증. Windows·Linux는 **미검증**. 검증한 버전은 Basic Memory 0.22.1
+> 지원 환경: macOS에서 직접 검증(Basic Memory 0.22.1). Windows·Linux는 단위 테스트만 GitHub Actions로 확인했고 Basic Memory 연동·실사용은 **미검증**
 
 ## 사용 예시
 
@@ -78,7 +78,8 @@ Claude Code는 `claude mcp add --scope user …`, Codex는 `codex mcp add …` �
 
 | 검증 | 결과 |
 |---|---|
-| 단위 테스트 `python3 -m unittest discover -s tests` | 32개 통과 (Python 3.11·3.12·3.14·3.15) |
+| 단위 테스트 `python3 -m unittest discover -s tests` | 34개 통과 (macOS: Python 3.11·3.12·3.14·3.15) |
+| GitHub Actions 단위 테스트 (`.github/workflows/ci.yml`) | Ubuntu·Windows × Python 3.11·3.13, 4개 잡 모두 통과 (2026-10-22 첫 실행) |
 | 격리 환경 재현 `python3 scripts/demo_roundtrip.py` | 15/15 — 등록, 사전 검사, 한글 검색, 현재 요약/이력 필터, 읽기, 작성·수정·재조회, 백업 리허설 |
 | 네트워크 차단 시뮬레이션 `--offline` | 14 통과 + 경고 1 (기본 hybrid 검색이 0건, 텍스트 검색은 정상) |
 | MCP stdio 계층 `python3 scripts/mcp_stdio_check.py` | 11/11 |

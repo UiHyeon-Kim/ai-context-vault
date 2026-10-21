@@ -63,7 +63,8 @@ README 첫 읽기는 HTTP 409 / MCP 서버 초기화 필요 오류가 발생했�
 
 | 검증 | 방법 | 결과 |
 |---|---|---|
-| 단위 테스트 | `python3 -m unittest discover -s tests` | 32개 통과 (Python 3.11·3.12·3.14·3.15). 깨진 링크를 넣어 실패를 잡는지도 확인 |
+| 단위 테스트 | `python3 -m unittest discover -s tests` | 34개 통과 (Python 3.11·3.12·3.14·3.15). 깨진 링크·앵커, 개인 경로 같은 잘못된 입력을 넣어 실패를 잡는지도 확인. 레거시 인코딩(ISO8859-1)과 CRLF 체크아웃을 흉내 낸 로컬 시험도 통과 |
+| GitHub Actions | `.github/workflows/ci.yml` — ubuntu-latest·windows-latest × Python 3.11·3.13, `unittest discover` | 첫 실행(PR의 커밋 `36185d6`) 4개 잡 모두 통과. Basic Memory를 설치하는 시험(`demo_roundtrip.py`, `mcp_stdio_check.py`)은 CI에서 실행하지 않음 |
 | 첫 사용 흐름 재현 | `python3 scripts/demo_roundtrip.py` | 15/15 (약 37초): 등록 → 사전 검사 → 색인 → 한글 텍스트 검색 → 현재 요약/이력 필터 → 기본 검색 → 읽기 → 작성·재조회 → 수정·재조회 → 파일 일치 → 백업 리허설 |
 | 오프라인 시뮬레이션 | `python3 scripts/demo_roundtrip.py --offline` | 14 통과 / 경고 1(기본 hybrid 검색 0건) / 실패 0 |
 | MCP stdio 계층 | `python3 scripts/mcp_stdio_check.py` (필요하면 Basic Memory의 Python으로 자동 재실행) | 11/11: 도구 23개, 한글 텍스트 검색, `metadata_filters`+`page_size=3` 레시피, 이력 필터, 기본 검색, 읽기, 작성·수정·재조회, 실패 응답 확인 |
@@ -98,7 +99,7 @@ README 첫 읽기는 HTTP 409 / MCP 서버 초기화 필요 오류가 발생했�
 
 미검증 (이번 작업에서 하지 않음)
 - ChatGPT·dots·Codex·Claude 채팅에서 AI가 새 인계 양식과 지침을 실제로 따르는지
-- Windows·Linux, Basic Memory 0.22.1 이외 버전, 새 컴퓨터에서의 처음부터 설치
+- Windows·Linux에서의 Basic Memory 연동과 실사용(단위 테스트는 CI 통과), Basic Memory 0.22.1 이외 버전, 새 컴퓨터에서의 처음부터 설치
 - `claude mcp add`·`codex mcp add` 실행, 병합 도구를 실제 연결 설정에 적용하는 것, 실제 개인 Vault의 색인 변경
 - 터널·LaunchAgent·키는 건드리지 않았고 재검증하지 않음 (파일 존재·형식·경로만 읽기 전용으로 점검)
 - 모델 다운로드 외에 노트 내용이 네트워크로 나가는지(트래픽 미측정)
