@@ -105,7 +105,7 @@ Claude Code는 `claude mcp add --scope user …`, Codex는 `codex mcp add …` �
 ## 한계
 
 - 전체 대화를 동기화하지 않는다. **저장한 노트만** 공유된다
-- AI가 지침을 항상 따른다는 보장이 없다. 중요한 인계는 저장 위치를 명시하고 재조회로 확인한다
+- AI가 지침을 항상 따른다는 보장이 없다. 중요한 인계는 저장 위치를 명시하고 재조회로 확인한다. 채팅에서 규칙을 따르는지 확인하는 절차는 [채팅 검증](docs/chat-verification.md)
 - 쓰기 안전은 서버 기능이 아니라 운영 규칙이다 — 확인 없는 `append` 반복은 중복되고, 없는 노트에 `append`하면 오류 없이 새 노트가 만들어지며, 편집 실패가 `isError` 없이 올 수 있다 (모두 시험으로 확인)
 - 새 Vault는 색인 전 검색이 비어 있을 수 있다. 첫 실행에서 Basic Memory가 임베딩 모델을 내려받으며, 받지 못하면 기본(hybrid) 검색이 비므로 `search_type=text`를 쓴다
 - ChatGPT·dots 사용 시 Vault가 있는 컴퓨터가 켜져 있고 터널이 동작해야 한다. 요금·플랜은 각 서비스 기준이다
@@ -118,7 +118,7 @@ Claude Code는 `claude mcp add --scope user …`, Codex는 `codex mcp add …` �
 
 ## 문서 목록
 
-[빠른 시작](docs/quickstart.md) · [이름 구분](docs/naming.md) · [설정](docs/setup.md) · [사용법](docs/usage.md) · [노트 구조](docs/context-structure.md) · [오류 대응](docs/troubleshooting.md) · [유지보수](docs/maintenance.md) · [기능 상태](docs/status.md) · [검증 현황](docs/verification.md) · [라이선스](docs/license-options.md)
+[빠른 시작](docs/quickstart.md) · [이름 구분](docs/naming.md) · [설정](docs/setup.md) · [사용법](docs/usage.md) · [노트 구조](docs/context-structure.md) · [오류 대응](docs/troubleshooting.md) · [채팅 검증](docs/chat-verification.md) · [유지보수](docs/maintenance.md) · [기능 상태](docs/status.md) · [검증 현황](docs/verification.md) · [라이선스](docs/license-options.md)
 [공통 지침](prompts/shared-context.md) · [연결 시험](prompts/roundtrip-test.md) · [인계 양식](templates/handoff.md) · [이력 양식](templates/history.md) · [Vault README 양식](templates/vault-readme.md)
 
 ## 이 저장소에 넣지 않는 것

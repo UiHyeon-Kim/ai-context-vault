@@ -121,7 +121,7 @@ PR #2를 여러 관점(줄 단위, 삭제된 동작, 호출 관계, 언어 함�
 - 첫 실행에서 임베딩 모델을 Hugging Face에서 내려받는 출력이 있었음
 
 미검증 (이번 작업에서 하지 않음)
-- ChatGPT·dots·Codex·Claude 채팅에서 AI가 새 인계 양식과 지침을 실제로 따르는지
+- ChatGPT·dots·Codex·Claude 채팅에서 AI가 새 인계 양식과 지침을 실제로 따르는지 (확인 절차와 결과 기록 양식: [채팅 검증](chat-verification.md))
 - Windows·Linux에서의 Basic Memory 연동과 실사용(단위 테스트는 CI 통과), Basic Memory 0.22.1 이외 버전, 새 컴퓨터에서의 처음부터 설치
 - `claude mcp add`·`codex mcp add` 실행, 병합 도구를 실제 연결 설정에 적용하는 것, 실제 개인 Vault의 색인 변경
 - 터널·LaunchAgent·키는 건드리지 않았고 재검증하지 않음 (파일 존재·형식·경로만 읽기 전용으로 점검)
