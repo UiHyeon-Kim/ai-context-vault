@@ -1,6 +1,7 @@
 # 연결 설정 예시
 
-검증 환경은 macOS, Basic Memory 0.22.1, tunnel-client 0.0.15였음
+검증 환경은 macOS 27(2026-10 기준), Basic Memory 0.22.1, tunnel-client 0.0.15였음
+Windows·Linux는 단위 테스트만 CI에서 확인했고 Basic Memory·MCP 연동과 실사용은 직접 검증하지 않았음. Basic Memory·MCP 부분은 OS 공통 개념이지만 경로 표기와 명령은 환경별로 확인해야 함 ([지원 환경 표](status.md#지원-환경))
 아래는 기존 정상 구성을 옮기기 위한 예시이며 다른 OS·버전에서 자동 설치까지 검증한 패키지가 아님
 기존 사용자 설정 파일을 예시 파일로 통째로 덮어쓰지 않고 필요한 항목만 병합함
 
@@ -20,8 +21,10 @@ Vault의 README에 폴더 책임, 정본 위치, 출처·검증 규칙을 둠
 
 ## Codex·Claude 로컬 MCP
 
-- Codex는 [TOML 예시](../examples/codex-mcp.toml)를 기존 설정에 병합함
-- Claude 계열은 [stdio JSON 예시](../examples/claude-mcp.json)를 해당 클라이언트의 지원 설정 방식에 맞게 적용함
+- Codex는 [TOML 예시](../examples/codex-mcp.toml)를 기존 설정에 병합함 (`codex mcp add` 공식 명령도 있음)
+- Claude Code는 `claude mcp add --scope user …`를 사용함. `~/.claude.json`은 앱이 계속 다시 쓰는 상태 파일이므로 직접 편집·병합하지 않음
+- Claude Desktop은 [stdio JSON 예시](../examples/claude-mcp.json)를 설정 JSON에 병합함
+- 등록 명령과 병합 도구 사용법, 각각 검증한 범위는 [빠른 시작](quickstart.md#4-ai-클라이언트에-연결)에 정리함. `scripts/vault_doctor.py --config`로 설정 파일의 자리 표시자·경로·프로젝트 ID 불일치를 검사할 수 있음
 - 실행 파일 경로는 실제 설치 위치의 절대 경로를 사용함
 - `mcp --project ai-vault`로 연결할 보관함 범위를 지정함
 - 설정을 저장한 뒤 클라이언트에서 연결을 다시 불러오거나 새 채팅을 열어 도구 노출을 확인함
@@ -55,7 +58,10 @@ tunnel-client run \
 예시 JSON은 YAML로도 읽을 수 있는 형식이며 로컬 프로필 이름은 `ai-vault.yaml`로 둠
 로그·health·PID 파일의 상위 디렉터리는 실행 전에 준비함
 
-## Mac 로그인 자동 실행
+## 로그인 시 자동 실행 (macOS 예시)
+
+이 절은 macOS LaunchAgent 전용이며 ChatGPT 터널을 상시 쓰는 경우에만 필요함. 로컬 MCP(Codex·Claude)만 쓰면 건너뜀
+Windows는 작업 스케줄러, Linux는 systemd 사용자 서비스 같은 해당 OS의 방식을 써야 하며 이 저장소는 예시를 제공하지 않고 검증하지도 않았음
 
 [LaunchAgent 예시](../examples/com.example.ai-vault-tunnel.plist)의 모든 절대 경로를 바꾸고 사용자 `~/Library/LaunchAgents/` 아래에 설치함
 plist 안의 `~`나 `$HOME`은 셸처럼 자동 확장되지 않으므로 실제 절대 경로가 필요함
@@ -78,5 +84,5 @@ tunnel-client health \
 ```
 
 시작 직후에는 첫 poll 전이라 마지막 조건이 아직 충족되지 않을 수 있음
-Mac이 꺼지거나 잠들면 로컬 Vault 접근도 사용할 수 없을 수 있음
+Vault가 있는 컴퓨터가 꺼지거나 잠들면 터널을 통한 접근은 사용할 수 없을 수 있음
 dots에 컴퓨터 전체 접근 권한을 별도로 주는 것과 이 MCP 터널 연결은 다른 기능임

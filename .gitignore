@@ -19,3 +19,5 @@ secrets/
 backups/
 profiles/
 local/
+__pycache__/
+*.pyc
