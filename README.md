@@ -15,13 +15,27 @@ AI는 대화가 끝나면 맥락을 잃고, 다른 AI는 그 대화를 모른다
 | **외부 도구 (이 저장소가 만들지 않음)** | [Basic Memory](https://docs.basicmemory.com/) — 노트 색인·검색·읽기·쓰기 MCP 도구 제공 (AGPL-3.0-or-later). Obsidian, OpenAI tunnel-client |
 | **이 저장소가 만든 것** | ① 현재 요약 / 상세 이력 / 인계 기록 구조와 양식 ② AI 공통 지침 ③ 설정 예시 ④ `vault_doctor.py` 사전 검사 ⑤ `merge_mcp_config.py` 안전한 설정 병합 ⑥ 가상 데모 Vault와 재현 시험 스크립트 |
 
-새 메모리 제품, MCP 서버, 검색 엔진, 동기화 서비스를 만든 것이 아니다. 자세한 분류는 [기능 상태와 책임 구분](docs/status.md)
+새 메모리 제품, MCP 서버, 검색 엔진, 동기화 서비스를 만든 것이 아니다. 현재 요약/상세 이력 구분은 노트 메타데이터와 운영 규칙이며 자동 요약·주기 정리 프로그램이 아니다. 자세한 분류는 [기능 상태와 책임 구분](docs/status.md)
+
+## 어떻게 동작하나
+
+1. AI가 짧은 운영 규칙을 읽고 관련 주제의 현재 요약부터 조회한다
+2. 대화에서 확정한 결정·이유·근거·남은 일을 현재 요약에 갱신하고 긴 실행 이력은 별도 노트로 분리한다
+3. 다른 AI가 같은 노트의 최신 내용을 읽고 작업을 이어간다
+
+저장하지 않은 내용을 다른 AI가 알고 있다고 가정하지 않는다. 특정 개발 프로젝트를 먼저 만들 필요도 없다 — `ai-vault`는 공용 보관함 이름이며 조사·학습·개인 결정에도 쓸 수 있다
+
+```text
+Codex / Claude Code / Claude Desktop ── 로컬 MCP ─┐
+                                                ├─ Basic Memory ─ Obsidian Vault
+ChatGPT / dots ─ AI-Vault 플러그인 ─ 보안 터널 ───┘
+```
 
 ## 누구에게 필요한가
 
 - Codex·Claude Code·ChatGPT 등을 번갈아 쓰며 “아까 정한 것”을 매번 다시 설명하는 사람
 - 결정과 근거를 노트로 남기고 AI가 이어서 읽게 하고 싶은 사람 (Obsidian 사용 여부는 무관)
-- 필요 없는 것: 클라우드 가입, 별도 서버, 데이터베이스 운영 (로컬 Basic Memory 사용)
+- 필요 없는 것: 클라우드 가입, 별도 서버, 데이터베이스 운영 (로컬 Basic Memory를 쓰며 별도 Basic Memory Cloud 가입은 하지 않는다)
 
 ## 빠른 시작
 
@@ -39,7 +53,7 @@ python3 scripts/merge_mcp_config.py --format codex-toml --target "$HOME/.codex/c
   --command "$(command -v basic-memory)" --project ai-vault
 ```
 
-스크립트는 **Python 3.11 이상**이 필요하다 (macOS 기본 `/usr/bin/python3`는 3.9라 안내 메시지를 내고 멈춘다)
+스크립트는 **Python 3.11 이상**이 필요하다 (검증한 Mac의 기본 `/usr/bin/python3`는 3.9라 안내 메시지를 내고 멈춘다)
 Claude Code는 `claude mcp add --scope user …`, Codex는 `codex mcp add …` 공식 명령도 쓸 수 있다 — 클라이언트별 방법은 [빠른 시작](docs/quickstart.md#4-ai-클라이언트에-연결)
 
 그다음 새 채팅에서 [연결 시험 문구](prompts/roundtrip-test.md)로 읽기 → 검색 → 기록 → 재조회를 확인한다
@@ -78,7 +92,7 @@ Claude Code는 `claude mcp add --scope user …`, Codex는 `codex mcp add …` �
 
 | 검증 | 결과 |
 |---|---|
-| 단위 테스트 `python3 -m unittest discover -s tests` | 34개 통과 (macOS: Python 3.11·3.12·3.14·3.15) |
+| 단위 테스트 `python3 -m unittest discover -s tests` | 47개 통과 (macOS: Python 3.11·3.12·3.14·3.15) |
 | GitHub Actions 단위 테스트 (`.github/workflows/ci.yml`) | Ubuntu·Windows × Python 3.11·3.13, 4개 잡 모두 통과 (2026-10-22 첫 실행) |
 | 격리 환경 재현 `python3 scripts/demo_roundtrip.py` | 15/15 — 등록, 사전 검사, 한글 검색, 현재 요약/이력 필터, 읽기, 작성·수정·재조회, 백업 리허설 |
 | 네트워크 차단 시뮬레이션 `--offline` | 14 통과 + 경고 1 (기본 hybrid 검색이 0건, 텍스트 검색은 정상) |
@@ -95,6 +109,7 @@ Claude Code는 `claude mcp add --scope user …`, Codex는 `codex mcp add …` �
 - 쓰기 안전은 서버 기능이 아니라 운영 규칙이다 — 확인 없는 `append` 반복은 중복되고, 없는 노트에 `append`하면 오류 없이 새 노트가 만들어지며, 편집 실패가 `isError` 없이 올 수 있다 (모두 시험으로 확인)
 - 새 Vault는 색인 전 검색이 비어 있을 수 있다. 첫 실행에서 Basic Memory가 임베딩 모델을 내려받으며, 받지 못하면 기본(hybrid) 검색이 비므로 `search_type=text`를 쓴다
 - ChatGPT·dots 사용 시 Vault가 있는 컴퓨터가 켜져 있고 터널이 동작해야 한다. 요금·플랜은 각 서비스 기준이다
+- dots의 자체 기억과 AI-Vault는 별개다. 여러 AI에 전달할 결과는 Vault에 명시적으로 저장해야 한다
 - 코드·ADR·백로그의 정본은 각 프로젝트 저장소다. Vault에는 요약과 링크만 둔다
 
 ## 라이선스

@@ -1,6 +1,7 @@
 """표준 라이브러리 unittest. 실행: python3 -m unittest discover -s tests -v   (Python 3.11+)
 
-basic-memory를 실행하지 않는 단위 테스트만 포함한다 (실제 호출 시험은 scripts/demo_roundtrip.py, scripts/mcp_stdio_check.py).
+basic-memory를 실행하지 않는 단위 테스트만 포함한다. run_doctor는 --binary를 항상 FAKE_BIN으로 지정해
+PATH에 설치된 실제 basic-memory를 호출하지 않는다 (실제 호출 시험은 scripts/demo_roundtrip.py, scripts/mcp_stdio_check.py).
 """
 import contextlib
 import io
@@ -13,9 +14,12 @@ import tempfile
 import tomllib
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
+import demo_roundtrip as dr  # noqa: E402
+import mcp_stdio_check as mcs  # noqa: E402
 import merge_mcp_config as mc  # noqa: E402
 import vault_doctor as vd  # noqa: E402
 
@@ -23,9 +27,12 @@ FAKE_BIN = sys.executable  # 모든 OS에 존재하는 절대 경로 실행 파�
 
 
 def run_doctor(*args):
+    args = list(args)
+    if "--binary" not in args:
+        args += ["--binary", FAKE_BIN]  # 설치된 실제 basic-memory를 실행하지 않는다
     out = io.StringIO()
     with contextlib.redirect_stdout(out):
-        code = vd.main(list(args))
+        code = vd.main(args)
     return code, out.getvalue()
 
 
@@ -116,7 +123,7 @@ class DoctorTests(unittest.TestCase):
             "control_plane": {"api_key": f"file:{key}", "base_url": "https://example.invalid", "tunnel_id": "abc123"},
             "health": {"url_file": str(self.tmp / "logs" / "h.url")},
             "log": {"file": str(self.tmp / "logs" / "t.log")},
-            "mcp": {"commands": [{"channel": "main", "command": f"{FAKE_BIN} mcp --project ai-vault"}]},
+            "mcp": {"commands": [{"channel": "main", "command": f'"{FAKE_BIN}" mcp --project ai-vault'}]},
         }
         (self.tmp / "logs").mkdir(exist_ok=True)
         prof.update(over)
@@ -132,7 +139,7 @@ class DoctorTests(unittest.TestCase):
         data = json.loads(p.read_text(encoding="utf-8"))
         data["control_plane"]["tunnel_id"] = ""
         data["control_plane"]["api_key"] = f"file:{self.tmp / 'missing-key'}"
-        data["mcp"]["commands"][0]["command"] = f"{FAKE_BIN} mcp --project wrong"
+        data["mcp"]["commands"][0]["command"] = f'"{FAKE_BIN}" mcp --project wrong'
         data["log"]["file"] = str(self.tmp / "no-such-dir" / "t.log")
         code, out = self.doctor(self.write_json("p2.json", data))
         self.assertEqual(code, 1)
@@ -155,6 +162,56 @@ class DoctorTests(unittest.TestCase):
         _, out = self.doctor(self.write_json("p3.json", data))
         self.assertIn("file: 참조가 아님", out)
         self.assertNotIn("inline-dummy-value-123", out)
+
+    def test_project_equals_form_is_understood(self):
+        ok = self.write_json("eq-ok.json", {"mcpServers": {"basic-memory": {"command": FAKE_BIN, "args": ["mcp", "--project=ai-vault"]}}})
+        self.assertEqual(self.doctor(ok)[0], 0)
+        bad = self.write_json("eq-bad.json", {"mcpServers": {"basic-memory": {"command": FAKE_BIN, "args": ["mcp", "--project=other"]}}})
+        code, out = self.doctor(bad)
+        self.assertEqual(code, 1)
+        self.assertIn("--project 값이", out)
+
+    def test_quoted_tunnel_command_with_spaces(self):
+        folder = self.tmp / "My Tools"
+        folder.mkdir()
+        exe = folder / "basic-memory"
+        exe.write_text("", encoding="utf-8")
+        profile = self.tunnel_profile(mcp={"commands": [{"channel": "main", "command": f'"{exe}" mcp --project ai-vault'}]})
+        code, out = self.doctor(profile)
+        self.assertEqual(code, 0, out)
+
+    def test_config_dir_resolution_matches_basic_memory(self):
+        with mock.patch.dict(os.environ, {}):
+            os.environ.pop("BASIC_MEMORY_CONFIG_DIR", None)
+            os.environ.pop("XDG_CONFIG_HOME", None)
+            self.assertEqual(vd.bm_data_dir(None), Path.home() / ".basic-memory")
+            os.environ["XDG_CONFIG_HOME"] = str(self.tmp / "xdg")
+            self.assertEqual(vd.bm_data_dir(None), self.tmp / "xdg" / "basic-memory")
+            os.environ["BASIC_MEMORY_CONFIG_DIR"] = str(self.tmp / "explicit")
+            self.assertEqual(vd.bm_data_dir(None), self.tmp / "explicit")
+            self.assertEqual(vd.bm_data_dir(str(self.tmp / "cli")), self.tmp / "cli")
+
+    def test_registered_project_is_found_under_xdg_config_home(self):
+        xdg_cfg = self.tmp / "xdg" / "basic-memory"
+        xdg_cfg.mkdir(parents=True)
+        (xdg_cfg / "config.json").write_text(json.dumps({"projects": {"ai-vault": {"path": str(self.vault)}}}), encoding="utf-8")
+        with mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": str(self.tmp / "xdg")}):
+            os.environ.pop("BASIC_MEMORY_CONFIG_DIR", None)
+            code, out = run_doctor("--vault", str(self.vault))
+        self.assertIn("Vault 폴더 일치", out)
+        self.assertNotIn("설정을 찾을 수 없음", out)
+
+    @unittest.skipUnless(os.name == "posix", "POSIX 셸 스크립트")
+    def test_helper_never_runs_the_real_basic_memory(self):
+        log = self.tmp / "calls.log"
+        fake_dir = self.tmp / "fakebin"
+        fake_dir.mkdir()
+        fake = fake_dir / "basic-memory"
+        fake.write_text(f'#!/bin/sh\necho "$@" >> "{log}"\n', encoding="utf-8")
+        os.chmod(fake, 0o755)
+        with mock.patch.dict(os.environ, {"PATH": f"{fake_dir}{os.pathsep}{os.environ.get('PATH', '')}"}):
+            run_doctor("--vault", str(self.vault), "--config-dir", str(self.cfgdir))
+        self.assertFalse(log.exists(), "테스트가 PATH의 basic-memory를 실행함")
 
     def test_plist_checks(self):
         good = self.tmp / "a.plist"
@@ -270,6 +327,76 @@ class MergeTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("claude mcp add", out)
 
+    def test_conflict_message_hides_env_and_other_values(self):
+        t = self.tmp / "c.json"
+        entry = {"command": "/old", "args": ["mcp"], "env": {"TOKEN": "SECRET-VALUE-123"}, "headers": {"A": "ZZZ-SECRET"}}
+        t.write_text(json.dumps({"mcpServers": {"basic-memory": entry}}), encoding="utf-8")
+        with self.assertRaises(SystemExit) as cm:
+            self.run_merge("claude-json", t, "--apply")
+        msg = str(cm.exception)
+        for secret in ("SECRET-VALUE-123", "ZZZ-SECRET"):
+            self.assertNotIn(secret, msg)
+        self.assertIn("/old", msg)
+        self.assertIn("env", msg)  # 키 이름은 알려 준다
+
+    def test_non_utf8_file_aborts_cleanly(self):
+        t = self.tmp / "cp949.toml"
+        raw = '# 내 설정\nmodel = "x"\n'.encode("cp949")
+        t.write_bytes(raw)
+        with self.assertRaises(SystemExit) as cm:
+            self.run_merge("codex-toml", t, "--apply")
+        self.assertIn("UTF-8", str(cm.exception))
+        self.assertEqual(t.read_bytes(), raw)
+        self.assertEqual(self.backups("cp949.toml"), [])
+
+    def test_suggested_claude_command_quotes_paths_with_spaces(self):
+        t = self.tmp / ".claude.json"
+        t.write_text("{}", encoding="utf-8")
+        spaced = str(self.tmp / "My Tools" / "basic-memory")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            mc.main(["--format", "claude-json", "--target", str(t), "--command", spaced, "--allow-missing-command"])
+        self.assertNotEqual(mc.quote_for_shell(spaced), spaced)  # 공백 경로에는 따옴표가 붙는다
+        self.assertIn(mc.quote_for_shell(spaced), out.getvalue())
+
+    def test_state_file_guard_ignores_case(self):
+        t = self.tmp / ".CLAUDE.JSON"
+        t.write_text("{}", encoding="utf-8")
+        with self.assertRaises(SystemExit):
+            self.run_merge("claude-json", t, "--apply")
+        self.assertEqual(t.read_text(encoding="utf-8"), "{}")
+
+    @unittest.skipUnless(os.name == "posix", "심볼릭 링크")
+    def test_state_file_guard_follows_symlinks(self):
+        real = self.tmp / ".claude.json"
+        real.write_text("{}", encoding="utf-8")
+        link = self.tmp / "settings.json"
+        link.symlink_to(real)
+        with self.assertRaises(SystemExit):
+            self.run_merge("claude-json", link, "--apply")
+        self.assertEqual(real.read_text(encoding="utf-8"), "{}")
+
+    def test_atomic_write_refuses_when_file_changed_after_it_was_read(self):
+        t = self.tmp / "c.toml"
+        t.write_bytes(b"changed by the app\n")
+        with self.assertRaises(mc.ChangedUnderUs):
+            mc.atomic_write(t, "new\n", expect_old=b"what we read\n")
+        self.assertEqual(t.read_bytes(), b"changed by the app\n")
+        appeared = self.tmp / "n.toml"
+        appeared.write_bytes(b"appeared meanwhile")
+        with self.assertRaises(mc.ChangedUnderUs):
+            mc.atomic_write(appeared, "new\n", expect_old=None)
+        self.assertEqual(list(self.tmp.glob("*.tmp")), [])  # 임시 파일 정리
+
+    def test_main_aborts_cleanly_when_file_changes_during_merge(self):
+        t = self.tmp / "c.toml"
+        t.write_text('model = "x"\n', encoding="utf-8")
+        with mock.patch.object(mc, "atomic_write", side_effect=mc.ChangedUnderUs):
+            with self.assertRaises(SystemExit) as cm:
+                self.run_merge("codex-toml", t, "--apply")
+        self.assertIn("바뀜", str(cm.exception))
+        self.assertEqual(t.read_text(encoding="utf-8"), 'model = "x"\n')
+
     def test_unique_backup_names(self):
         t = self.tmp / "x.json"
         t.write_text("{}", encoding="utf-8")
@@ -301,6 +428,19 @@ class MergeTests(unittest.TestCase):
         j.write_bytes(b"\xef\xbb\xbf" + b'{"theme": "dark"}')
         self.run_merge("claude-json", j, "--apply")
         self.assertEqual(json.loads(j.read_text(encoding="utf-8-sig"))["theme"], "dark")
+
+
+class IsolationTests(unittest.TestCase):
+    def test_isolated_env_drops_callers_basic_memory_settings(self):
+        leaked = {"BASIC_MEMORY_DEFAULT_SEARCH_TYPE": "text", "BASIC_MEMORY_HOME": "/real/notes", "HF_HUB_OFFLINE": "1"}
+        cfg, home = Path("cfg-dir"), Path("home-dir")
+        with mock.patch.dict(os.environ, leaked):
+            for env in (dr.isolated_env(cfg, home), mcs.isolated_env(cfg, home)):
+                for key in leaked:
+                    self.assertNotIn(key, env)
+                self.assertEqual(env["BASIC_MEMORY_CONFIG_DIR"], str(cfg))
+                self.assertEqual(env["HOME"], str(home))
+            self.assertEqual(dr.isolated_env(cfg, home, offline=True)["HF_HUB_OFFLINE"], "1")
 
 
 def github_slug(heading: str) -> str:
@@ -373,6 +513,7 @@ class RepoConsistencyTests(unittest.TestCase):
         for rel in ("prompts/shared-context.md", "templates/vault-readme.md"):
             text = (ROOT / rel).read_text(encoding="utf-8")
             self.assertIn("보류·금지", text, rel)
+        self.assertIn("search_type", (ROOT / "prompts/roundtrip-test.md").read_text(encoding="utf-8"))  # 검색이 비었을 때의 text 대체
 
     def test_license_is_mit_and_linked_from_readme(self):
         lic = (ROOT / "LICENSE").read_text(encoding="utf-8")

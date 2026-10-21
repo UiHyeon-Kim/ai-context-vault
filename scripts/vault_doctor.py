@@ -117,17 +117,26 @@ def _exists_unless_placeholder(path_str: str) -> bool:
     return any(p in path_str for p in PLACEHOLDERS) or Path(path_str).is_file() or bool(shutil.which(path_str))
 
 
+def _project_arg(args: list) -> tuple[bool, str | None]:
+    """(--project가 있는지, 그 값). `--project NAME`과 `--project=NAME` 형식을 모두 읽는다."""
+    for i, a in enumerate(args):
+        if a == "--project":
+            return True, (args[i + 1] if i + 1 < len(args) else None)
+        if isinstance(a, str) and a.startswith("--project="):
+            return True, a.split("=", 1)[1]
+    return False, None
+
+
 def _check_command(r: Report, name: str, cmd: str, args: list, project: str) -> None:
     if not cmd:
         r.err(f"{name}: command 누락")
     elif not _exists_unless_placeholder(cmd):
         r.err(f"{name}: command 경로가 존재하지 않음: {cmd}")
-    if "--project" not in args:
+    found, got = _project_arg(args)
+    if not found:
         r.warn(f"{name}: args에 --project가 없음 (기본 프로젝트가 사용됨)")
-    else:
-        got = args[args.index("--project") + 1:][:1]
-        if got != [project]:
-            r.err(f"{name}: --project 값이 '{project}'와 다름: {got}")
+    elif got != project:
+        r.err(f"{name}: --project 값이 '{project}'와 다름: {got!r}")
 
 
 def _check_parent_dir(r: Report, name: str, label: str, value: object) -> None:
@@ -167,7 +176,8 @@ def _check_tunnel(r: Report, name: str, data: dict, project: str) -> None:
         r.err(f"{name}: mcp.commands 누락")
     for c in cmds if isinstance(cmds, list) else []:
         line = c.get("command", "") if isinstance(c, dict) else ""
-        parts = shlex.split(line, posix=(os.name != "nt")) if line else []
+        parts = [p[1:-1] if len(p) >= 2 and p[0] == p[-1] == '"' else p
+                 for p in (shlex.split(line, posix=(os.name != "nt")) if line else [])]
         _check_command(r, name, parts[0] if parts else "", parts[1:], project)
     _check_parent_dir(r, name, "log.file", (data.get("log") or {}).get("file"))
     _check_parent_dir(r, name, "health.url_file", (data.get("health") or {}).get("url_file"))
@@ -219,12 +229,23 @@ def check_config(r: Report, path: Path, project: str) -> None:
         _check_plist(r, name, data if isinstance(data, dict) else {})
 
 
+def bm_data_dir(config_dir: str | None) -> Path:
+    """Basic Memory(0.22.1 resolve_data_dir)와 같은 우선순위로 설정 폴더를 정한다.
+    --config-dir > BASIC_MEMORY_CONFIG_DIR > $XDG_CONFIG_HOME/basic-memory > ~/.basic-memory"""
+    if config_dir:
+        return Path(config_dir)
+    if explicit := os.environ.get("BASIC_MEMORY_CONFIG_DIR"):
+        return Path(explicit)
+    if xdg := os.environ.get("XDG_CONFIG_HOME"):
+        return Path(xdg) / "basic-memory"
+    return Path.home() / ".basic-memory"
+
+
 def check_registered(r: Report, project: str, vault: Path, config_dir: str | None) -> None:
     """프로젝트 등록 여부를 Basic Memory의 config.json에서 읽기 전용으로 확인한다."""
-    base = Path(config_dir or os.environ.get("BASIC_MEMORY_CONFIG_DIR") or Path.home() / ".basic-memory")
-    cfg = base / "config.json"
+    cfg = bm_data_dir(config_dir) / "config.json"
     if not cfg.is_file():
-        r.warn(f"Basic Memory 설정을 찾을 수 없음({cfg}). 아직 project add 전이면 정상")
+        r.warn(f"Basic Memory 설정을 찾을 수 없음({cfg}). 아직 project add 전이면 정상. 다른 위치를 쓴다면 --config-dir로 지정")
         return
     try:
         projects = json.loads(cfg.read_text(encoding="utf-8")).get("projects", {})
@@ -249,7 +270,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--project", default="ai-vault", help="Basic Memory 프로젝트 ID (기본: ai-vault)")
     ap.add_argument("--binary", default="basic-memory", help="basic-memory 실행 파일 이름 또는 경로")
     ap.add_argument("--config", action="append", default=[], type=Path, help="검사할 설정 파일(MCP JSON/TOML, 터널 프로필, plist), 여러 번 지정 가능")
-    ap.add_argument("--config-dir", help="Basic Memory 설정 폴더 (기본: BASIC_MEMORY_CONFIG_DIR 또는 ~/.basic-memory)")
+    ap.add_argument("--config-dir", help="Basic Memory 설정 폴더 (기본: BASIC_MEMORY_CONFIG_DIR, 없으면 $XDG_CONFIG_HOME/basic-memory, 없으면 ~/.basic-memory)")
     a = ap.parse_args(argv)
     r = Report()
     check_binary(r, a.binary)

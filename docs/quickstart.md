@@ -7,7 +7,7 @@
 
 ## 0. 준비물
 
-- **Python 3.11 이상**: `python3 --version`으로 확인. macOS 기본 `/usr/bin/python3`는 3.9라서 이 저장소의 스크립트가 “Python 3.11 이상이 필요합니다” 메시지로 멈춤. 이때는 3.11 이상 인터프리터(예: Homebrew의 `python3.12`)로 실행
+- **Python 3.11 이상**: `python3 --version`으로 확인. 검증한 Mac의 기본 `/usr/bin/python3`는 3.9라서(다른 macOS 버전은 확인하지 않음) 이 저장소의 스크립트가 “Python 3.11 이상이 필요합니다” 메시지로 멈춤. 이때는 3.11 이상 인터프리터(예: Homebrew의 `python3.12`)로 실행
 - [Basic Memory 설치](https://docs.basicmemory.com/start-here/quickstart-local) 완료, `basic-memory --version` 동작
 - Markdown 폴더 하나 (Obsidian Vault여도 되고 새 폴더여도 됨). 기존 노트가 있으면 **먼저 폴더를 통째로 백업** ([백업·복구](maintenance.md))
 
@@ -44,7 +44,7 @@ python3 scripts/vault_doctor.py --vault /ABSOLUTE/PATH/AI-Vault --project ai-vau
 | 클라이언트 | 방법 | 이 저장소에서 확인한 범위 |
 |---|---|---|
 | Claude Code | `claude mcp add --scope user basic-memory -- /ABSOLUTE/PATH/basic-memory mcp --project ai-vault` | 문법은 `claude mcp add --help` 기준이며 **실행하지 않음**. `~/.claude.json`은 앱이 계속 다시 쓰는 상태 파일이라 `merge_mcp_config.py`는 이 파일의 적용을 거부함 |
-| Codex | `codex mcp add basic-memory -- /ABSOLUTE/PATH/basic-memory mcp --project ai-vault` 또는 아래 병합 도구 | 문법은 `codex mcp add --help` 기준이며 실행하지 않음. 공식 명령은 [예시](../examples/codex-mcp.toml)의 타임아웃 값(120초)을 넣지 않으므로 필요하면 `config.toml`에 추가 |
+| Codex | `codex mcp add basic-memory -- /ABSOLUTE/PATH/basic-memory mcp --project ai-vault` 또는 아래 병합 도구 | 문법은 `codex mcp add --help` 기준이며 실행하지 않음. 도움말에는 타임아웃 옵션이 없어서 [예시](../examples/codex-mcp.toml)의 타임아웃 값(120초)이 필요하면 실행 후 `config.toml`에 직접 추가해야 할 수 있음 (실행 결과는 미확인) |
 | Claude Desktop | 설정 JSON에 병합 (macOS 경로: `~/Library/Application Support/Claude/claude_desktop_config.json`) | 병합 도구는 임시 파일로 검증. 다른 OS의 경로는 확인하지 않았으니 앱 문서를 확인 |
 | ChatGPT·dots | [설정 방법](setup.md)의 터널 절차 | 이 작업에서는 재검증하지 않음 |
 
@@ -72,7 +72,7 @@ Claude Desktop은 `--format claude-json`에 위 경로를 `--target`으로 지�
 원인이 두 가지일 수 있음 (둘 다 격리 환경에서 재현함)
 
 1. **색인 전**: 새로 등록한 폴더는 색인되기 전까지 읽기·쓰기는 되어도 검색이 비어 있을 수 있음 → `basic-memory reindex --project ai-vault --full`을 한 번 실행하고 다시 검색
-2. **기본(hybrid) 검색이 임베딩 모델을 못 써서 비어 있음**: 이 버전은 의미 검색 구성요소가 있으면 기본 검색을 hybrid로 하고, 임베딩 모델을 받지 못한 환경(오프라인·차단)에서는 **텍스트 색인이 있어도 결과가 0건**이었음. 텍스트(`text`) 검색은 같은 조건에서 한글도 정상이었음 → 검색할 때 `search_type="text"`를 지정하거나, 환경변수 `BASIC_MEMORY_DEFAULT_SEARCH_TYPE=text`로 기본값을 바꿈 (환경변수는 CLI에서 확인함. 설정 파일의 `default_search_type`은 코드에 있으나 실행하지 않음)
+2. **기본(hybrid) 검색이 임베딩 모델을 못 써서 비어 있음**: 이 버전은 의미 검색 구성요소가 있으면 기본 검색을 hybrid로 하고, 임베딩 모델을 받지 못한 환경(오프라인·차단)에서는 **텍스트 색인이 있어도 결과가 0건**이었음. 텍스트(`text`) 검색은 같은 조건에서 한글도 정상이었음 → 검색할 때 `search_type="text"`를 지정하거나, 환경변수 `BASIC_MEMORY_DEFAULT_SEARCH_TYPE=text`로 기본값을 바꿈. 환경변수는 CLI에서만 확인했음. MCP 서버로 실행될 때는 셸 환경변수를 물려받지 못할 수 있으므로 클라이언트의 MCP 서버 설정 `env`에 넣어야 함 (`codex mcp add --env KEY=VALUE`, Claude 설정 JSON의 `env` 키 — 이 경로는 실행하지 않아 미확인). 설정 파일의 `default_search_type`은 코드에 있으나 실행하지 않음
 
 임베딩에 관한 사실: 기본 설정은 로컬 실행(fastembed)이며 모델 이름이 `bge-small-en-v1.5`(영어 모델 이름)임. 첫 실행 때 모델 파일을 Hugging Face에서 내려받음. 노트 내용을 외부로 보내는지는 네트워크 트래픽을 측정하지 않아 확인하지 못했고, 기본 provider가 로컬이라는 설정만 확인함. 한글 의미 검색의 품질은 평가하지 않았음 (5개 노트의 데모에서는 관련 노트가 1순위였으나 표본이 작음)
 이 저장소의 현재 요약 검색 예시는 처음부터 `search_type: text`를 쓰므로 이 문제의 영향을 받지 않음 ([노트 구조](context-structure.md))

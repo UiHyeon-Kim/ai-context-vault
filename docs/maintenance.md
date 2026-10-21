@@ -9,8 +9,10 @@
 |---|---|---|
 | Vault 폴더 (Markdown 원본) | **필수** | 노트의 정본. 폴더 복사만으로 충분 |
 | MCP 설정 파일 (Codex·Claude) | 권장 | `merge_mcp_config.py --apply`가 `.bak-타임스탬프`를 자동 생성 |
-| Basic Memory 설정·DB (`~/.basic-memory` 또는 `BASIC_MEMORY_CONFIG_DIR`) | 선택 | 검색 DB는 `reindex`로 Markdown에서 다시 만들 수 있음(임시 환경에서 확인). 프로젝트 등록 정보는 `config.json` |
+| Basic Memory 설정·DB (아래 설정 폴더) | 선택 | 검색 DB는 `reindex`로 Markdown에서 다시 만들 수 있음(임시 환경에서 확인). 프로젝트 등록 정보는 `config.json` |
 | 터널 키·프로필 | 별도 보관 | 키는 저장소·Vault에 넣지 않음. 이 저장소가 다루지 않음 |
+
+Basic Memory 설정 폴더는 `BASIC_MEMORY_CONFIG_DIR`이 있으면 그 폴더, 없고 `XDG_CONFIG_HOME`이 있으면 `$XDG_CONFIG_HOME/basic-memory`, 둘 다 없으면 `~/.basic-memory`임 (0.22.1 코드와 임시 환경 시험으로 확인). `vault_doctor.py`도 같은 순서로 찾음
 
 Vault 백업 예 (시각이 붙은 폴더로 복사. 경로는 예시)
 

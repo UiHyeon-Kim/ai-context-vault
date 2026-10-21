@@ -27,7 +27,9 @@ import contextlib
 import difflib
 import json
 import os
+import shlex
 import shutil
+import subprocess
 import tempfile
 import tomllib
 from datetime import datetime
@@ -35,7 +37,7 @@ from pathlib import Path
 
 NAME = "basic-memory"
 # 실행 중인 앱이 수시로 다시 쓰는 상태 파일. 통째로 다시 쓰면 동시 기록을 덮어쓸 수 있다.
-VOLATILE_FILES = {".claude.json"}
+VOLATILE_FILES = {".claude.json"}  # 소문자로 비교
 
 
 def desired(command: str, project: str, fmt: str) -> dict:
@@ -52,6 +54,19 @@ def toml_block(entry: dict) -> str:
              f"args = [{', '.join(q(x) for x in entry['args'])}]"]
     lines += [f"{k} = {entry[k]}" for k in ("startup_timeout_sec", "tool_timeout_sec") if k in entry]
     return "\n".join(lines) + "\n"
+
+
+def describe(entry) -> str:
+    """충돌 안내용 요약. command·args만 보여 주고 그 밖의 키(env, headers 등)는 값이 비밀일 수 있어 이름만 알린다."""
+    if not isinstance(entry, dict):
+        return f"({type(entry).__name__})"
+    shown = {k: entry[k] for k in ("command", "args") if k in entry}
+    hidden = sorted(k for k in entry if k not in ("command", "args"))
+    return json.dumps(shown, ensure_ascii=False) + (f" + 값을 숨긴 키: {', '.join(hidden)}" if hidden else "")
+
+
+def quote_for_shell(value: str) -> str:
+    return subprocess.list2cmdline([value]) if os.name == "nt" else shlex.quote(value)
 
 
 def parse(fmt: str, text: str) -> dict:
@@ -82,12 +97,12 @@ def plan(fmt: str, text: str | None, entry: dict, replace: bool) -> tuple[str | 
         return None, "이미 동일한 항목이 있음. 변경 없음"
     if fmt == "claude-json":
         if cur is not None and not replace:
-            raise SystemExit(f"중단: 다른 값의 '{NAME}' 항목이 이미 있음. 덮어쓰려면 --replace. 현재 값: {json.dumps(cur, ensure_ascii=False)}")
+            raise SystemExit(f"중단: 다른 값의 '{NAME}' 항목이 이미 있음. 덮어쓰려면 --replace. 현재 값: {describe(cur)}")
         data.setdefault("mcpServers", {})[NAME] = entry
         new, status = json.dumps(data, indent=2, ensure_ascii=False) + "\n", ("항목 교체" if cur else "항목 추가")
     else:
         if cur is not None:
-            raise SystemExit(f"중단: TOML에 다른 값의 [mcp_servers.{NAME}]이 있음. 주석·서식 보존을 위해 자동 교체하지 않으니 직접 수정. 현재 값: {cur}")
+            raise SystemExit(f"중단: TOML에 다른 값의 [mcp_servers.{NAME}]이 있음. 주석·서식 보존을 위해 자동 교체하지 않으니 직접 수정. 현재 값: {describe(cur)}")
         sep = "" if not text or text.endswith("\n\n") else ("\n" if text.endswith("\n") else "\n\n")
         new, status = text + sep + toml_block(entry), "항목 추가 (기존 내용 뒤에 덧붙임)"
     # 쓰기 전 검증: 변경 후 내용이 유효하고 원하는 항목을 정확히 담아야 한다.
@@ -110,7 +125,12 @@ def unique_backup(path: Path) -> Path:
     return bak
 
 
-def atomic_write(path: Path, text: str) -> None:
+class ChangedUnderUs(Exception):
+    """읽은 뒤 교체 직전까지 다른 프로그램이 파일을 바꿨다."""
+
+
+def atomic_write(path: Path, text: str, expect_old: bytes | None) -> None:
+    """임시 파일에 쓴 뒤 교체한다. 교체 직전에 파일이 읽었을 때와 같은지(없었다면 여전히 없는지) 확인한다."""
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=path.name + ".", suffix=".tmp")
     try:
@@ -118,6 +138,8 @@ def atomic_write(path: Path, text: str) -> None:
             f.write(text)
         if path.exists():
             shutil.copymode(path, tmp)
+        if (path.read_bytes() if path.exists() else None) != expect_old:
+            raise ChangedUnderUs
         os.replace(tmp, path)
     except BaseException:
         with contextlib.suppress(OSError):
@@ -146,15 +168,19 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(f"중단: 실행 파일이 없음: {cmd}")
 
     target = a.target.expanduser()
-    if target.name in VOLATILE_FILES:
-        msg = (f"{target.name}은(는) Claude Code가 실행 중 계속 다시 쓰는 상태 파일이라 이 도구로 수정하지 않음. "
-               f"대신 `claude mcp add --scope user {NAME} -- {a.command} mcp --project {a.project}` 를 사용 "
+    real = target.resolve() if target.exists() else target  # 심볼릭 링크면 링크가 아닌 실제 파일을 갱신
+    if {target.name.lower(), real.name.lower()} & VOLATILE_FILES:
+        msg = (f"{real.name}은(는) Claude Code가 실행 중 계속 다시 쓰는 상태 파일이라 이 도구로 수정하지 않음. "
+               f"대신 `claude mcp add --scope user {NAME} -- {quote_for_shell(a.command)} mcp --project {quote_for_shell(a.project)}` 를 사용 "
                "(문법은 `claude mcp add --help` 기준)")
         if a.apply:
             raise SystemExit("중단: " + msg)
         print("주의: " + msg)
-    real = target.resolve() if target.exists() else target  # 심볼릭 링크면 링크가 아닌 실제 파일을 갱신
-    old = real.read_bytes().decode("utf-8-sig") if real.exists() else None
+    old_bytes = real.read_bytes() if real.exists() else None
+    try:
+        old = old_bytes.decode("utf-8-sig") if old_bytes is not None else None
+    except UnicodeDecodeError as e:
+        raise SystemExit(f"중단: 기존 파일이 UTF-8이 아님({e.reason}). 아무것도 수정하지 않음. UTF-8로 저장한 뒤 다시 실행하세요") from e
     crlf = bool(old and "\r\n" in old)
     old_lf = old.replace("\r\n", "\n") if old is not None else None
     try:
@@ -174,7 +200,10 @@ def main(argv: list[str] | None = None) -> int:
         bak = unique_backup(real)
         shutil.copy2(real, bak)
         print(f"백업: {bak}")
-    atomic_write(real, new.replace("\n", "\r\n") if crlf else new)
+    try:
+        atomic_write(real, new.replace("\n", "\r\n") if crlf else new, old_bytes)
+    except ChangedUnderUs:
+        raise SystemExit("중단: 읽은 뒤 파일이 바뀜(앱이 같은 파일을 쓰는 중일 수 있음). 파일은 수정하지 않았음. 앱을 종료하거나 잠시 뒤 다시 실행하세요 (백업은 이미 만들어졌을 수 있음)") from None
     again = real.read_bytes().decode("utf-8-sig").replace("\r\n", "\n")  # 디스크에서 다시 읽어 확인
     ok = current_entry(a.format, parse(a.format, again)) == desired(a.command, a.project, a.format)
     print("적용 후 재조회: " + ("확인됨" if ok else "불일치! 백업에서 복구할 것"))

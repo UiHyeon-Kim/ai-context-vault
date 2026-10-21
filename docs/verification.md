@@ -59,12 +59,12 @@ README 첫 읽기는 HTTP 409 / MCP 서버 초기화 필요 오류가 발생했�
 
 ## 2026-10-22 starter kit 점검 (임시 데모 환경)
 
-환경: macOS(Darwin 27.0.1), Python 3.15.0(스크립트 호환은 3.11·3.12·3.14에서도 단위 테스트), Basic Memory 0.22.1. 실제 개인 Vault·실제 MCP 설정·실행 중인 서비스는 쓰지 않았고, 실행하는 시험은 임시 `HOME`·`BASIC_MEMORY_CONFIG_DIR`·데모 Vault 사본만 사용함. 실제 설정과 Vault는 `vault_doctor.py`로 **읽기 전용 점검**만 함
+환경: macOS 27.0.1(커널 Darwin 27.0.0), Python 3.15.0(스크립트 호환은 3.11·3.12·3.14에서도 단위 테스트), Basic Memory 0.22.1. 실제 개인 Vault·실제 MCP 설정·실행 중인 서비스는 쓰지 않았고, 실행하는 시험은 임시 `HOME`·`BASIC_MEMORY_CONFIG_DIR`·데모 Vault 사본만 사용함. 실제 설정과 Vault는 `vault_doctor.py`로 **읽기 전용 점검**만 함
 
 | 검증 | 방법 | 결과 |
 |---|---|---|
-| 단위 테스트 | `python3 -m unittest discover -s tests` | 34개 통과 (Python 3.11·3.12·3.14·3.15). 깨진 링크·앵커, 개인 경로 같은 잘못된 입력을 넣어 실패를 잡는지도 확인. 레거시 인코딩(ISO8859-1)과 CRLF 체크아웃을 흉내 낸 로컬 시험도 통과 |
-| GitHub Actions | `.github/workflows/ci.yml` — ubuntu-latest·windows-latest × Python 3.11·3.13, `unittest discover` | 첫 실행(PR의 커밋 `36185d6`) 4개 잡 모두 통과. Basic Memory를 설치하는 시험(`demo_roundtrip.py`, `mcp_stdio_check.py`)은 CI에서 실행하지 않음 |
+| 단위 테스트 | `python3 -m unittest discover -s tests` | 47개 통과 (Python 3.11·3.12·3.14·3.15). 깨진 링크·앵커, 개인 경로 같은 잘못된 입력을 넣어 실패를 잡는지도 확인. 레거시 인코딩(ISO8859-1)과 CRLF 체크아웃을 흉내 낸 로컬 시험도 통과 |
+| GitHub Actions | `.github/workflows/ci.yml` — ubuntu-latest·windows-latest × Python 3.11·3.13, `unittest discover` | PR #2의 CI 실행에서 4개 잡 모두 통과. Basic Memory를 설치하는 시험(`demo_roundtrip.py`, `mcp_stdio_check.py`)은 CI에서 실행하지 않음 |
 | 첫 사용 흐름 재현 | `python3 scripts/demo_roundtrip.py` | 15/15 (약 37초): 등록 → 사전 검사 → 색인 → 한글 텍스트 검색 → 현재 요약/이력 필터 → 기본 검색 → 읽기 → 작성·재조회 → 수정·재조회 → 파일 일치 → 백업 리허설 |
 | 오프라인 시뮬레이션 | `python3 scripts/demo_roundtrip.py --offline` | 14 통과 / 경고 1(기본 hybrid 검색 0건) / 실패 0 |
 | MCP stdio 계층 | `python3 scripts/mcp_stdio_check.py` (필요하면 Basic Memory의 Python으로 자동 재실행) | 11/11: 도구 23개, 한글 텍스트 검색, `metadata_filters`+`page_size=3` 레시피, 이력 필터, 기본 검색, 읽기, 작성·수정·재조회, 실패 응답 확인 |
@@ -83,8 +83,31 @@ README 첫 읽기는 HTTP 409 / MCP 서버 초기화 필요 오류가 발생했�
 | 데모의 한글 검색 확인이 의미 검색 잡음에 가려질 수 있고, 오프라인에서는 기본 검색이 0건 | `HF_HUB_OFFLINE=1`로 재현, 텍스트 검색은 정상 | 시험을 텍스트 검색 기준으로 바꾸고 기본 검색은 경고 처리, 문서화 |
 | 문서화된 `metadata_filters`·`page_size` 레시피를 이번에 검증하지 않았음 | 보고 점검 | MCP 시험에 추가하고 이력 제외까지 확인 |
 | 공통 지침·Vault README 양식에 새 인계 항목(현재 상태, 보류·금지 범위)이 빠져 AI가 쓸 근거가 없었음 | 테스트가 실패하며 발견 | 지침·양식·사용 문구에 반영하고 회귀 테스트 추가 |
-| 테스트에 `/usr/bin/true`(비이식)와 작성자 사용자명 문자열이 있었음 | 코드 검토 | `sys.executable`과 일반 정규식 검사로 교체 |
+| 테스트에 비이식 경로(`/usr/bin/true`)와 개인 환경 경로가 하드코딩돼 있었음 | 코드 검토 | `sys.executable`과 일반 정규식 검사로 교체 |
 | 검증하지 않은 서술(“20~30분”, 백업 절차 점검 범위, 모델 파일 외 전송 여부) | 문서 검토 | 삭제·정정·미확인 표시 |
+
+### PR 병합 전 코드 리뷰에서 발견해 고친 문제 (2026-10-22)
+
+PR #2를 여러 관점(줄 단위, 삭제된 동작, 호출 관계, 언어 함정, 정리, 규칙 준수)으로 다시 읽고, 재현할 수 있는 것은 임시 파일·임시 환경에서 재현했음. 15건을 보고했고 14건을 고쳤으며 1건은 적용하지 않음
+
+| 문제 | 확인 | 조치 |
+|---|---|---|
+| 병합 도구의 충돌 안내가 기존 항목의 `env` 값을 그대로 출력함 | 재현 | `command`·`args`만 보여 주고 나머지 키는 이름만 표시 |
+| `vault_doctor.py`가 `XDG_CONFIG_HOME`을 무시하고 `~/.basic-memory`만 봄 | 재현 (Basic Memory는 `$XDG_CONFIG_HOME/basic-memory`를 먼저 씀) | Basic Memory와 같은 우선순위로 탐색, 문서에 반영 |
+| README 개편이 구조 그림·동작 3단계·“프로젝트 불필요”·“dots 기억은 별개” 설명을 지움 | `git grep`으로 어디에도 없음을 확인 | README에 복원 |
+| UTF-8이 아닌 설정 파일에서 추적 메시지로 중단 | 재현 | 수정 없이 깨끗한 메시지로 중단 |
+| 격리 시험이 호출자의 `BASIC_MEMORY_*` 환경변수를 물려받아 hybrid 시험이 text로 바뀜 | 재현 | 해당 변수와 `HF_HUB_OFFLINE`을 지우고 실행 |
+| 단위 테스트 2개가 PATH의 실제 `basic-memory`를 실행함 | 감시용 가짜 실행 파일로 재현 | 테스트 헬퍼가 항상 가짜 실행 파일을 쓰도록 변경, 회귀 테스트 추가 |
+| `--project=NAME` 형식을 인식하지 못함 | 재현 | 두 형식 모두 처리 |
+| 기능 상태 문서의 “개인 Vault에는 아직 반영 안 됨”이 이미 거짓 | 문서 대조 | 삭제(개인 배포 상태는 이 저장소의 범위가 아님) |
+| 안내하는 `claude mcp add` 명령에서 공백 경로를 인용하지 않음 | 재현 | 인용 처리 |
+| 병합 도구가 읽은 뒤 교체 사이의 동시 쓰기를 감지하지 못함 | 코드 검토(가능성) | 교체 직전에 파일이 같은지 확인하고 다르면 중단 |
+| 보호 대상 파일(`.claude.json`) 검사가 대소문자·심볼릭 링크로 우회됨 | 코드 검토 | 실제 파일명 기준·소문자 비교 |
+| 검증 문서가 병합 후 사라질 커밋 SHA를 가리키고 OS 표기가 섞임 | 문서 대조 | SHA 제거, `macOS 27.0.1(커널 Darwin 27.0.0)` |
+| 연결 시험 문구에 검색이 비었을 때의 `text` 대체가 없음 | 문서 대조 | 문구 추가, 회귀 테스트 추가 |
+| `codex mcp add`가 타임아웃을 넣지 않는다고 단정함(실행하지 않음), MCP 클라이언트의 환경변수 지정 방법 누락 | 문서 대조 | 미확인으로 정정하고 `env` 설정 위치 안내 |
+| Windows에서 따옴표가 붙은 공백 경로 명령을 존재하지 않는다고 판정 | 코드 검토(가능성) | 따옴표 제거 처리, 테스트 추가 |
+| CI가 GitHub 제공 액션을 SHA가 아닌 메이저 태그로 참조 | 코드 검토 | 적용하지 않음(자동 갱신 설정이 따로 필요). 동시 실행 취소 설정만 추가 |
 
 ### 새로 확인한 동작 (Basic Memory 0.22.1)
 

@@ -10,6 +10,7 @@ AI가 지침을 따르는지는 검증하지 않는다.
 
 --offline: 임베딩 모델을 받을 수 없는 환경을 흉내낸다(HF_HUB_OFFLINE=1).
   이때 텍스트 검색은 통과해야 하고 기본(hybrid) 검색은 WARN이 정상이다.
+호출자의 BASIC_MEMORY_* 환경변수는 지우고 실행한다(예: 기본 검색 유형을 text로 바꿔 둔 환경에서도 hybrid 단계가 그대로 시험된다).
 참고: 첫 실행에서 Basic Memory가 의미 검색용 임베딩 모델을 Hugging Face에서 내려받는다
 (격리 HOME이라 매 실행마다 다시 받으므로 수십 초 걸린다).
 종료 코드: FAIL이 하나라도 있으면 1, WARN은 실패가 아니다.
@@ -34,6 +35,16 @@ PROJECT = "demo-vault"
 MARK = "RT-MARK-7f3a"  # 시험용 고유 표식 (실제 노트에 쓰지 말 것)
 NOTE = "Inbox/데모 테스트 노트"
 HISTORY_TITLE = "2026-01-05-검색-검증"
+
+
+def isolated_env(cfg: Path, home: Path, offline: bool = False) -> dict:
+    """'격리' 실행용 환경. 호출자의 BASIC_MEMORY_*(기본 검색 유형, 홈 폴더 등)와 HF_HUB_OFFLINE을 지워
+    사용자 설정이 시험 결과에 섞이지 않게 하고, 임시 HOME·설정 폴더만 가리키게 한다."""
+    env = {k: v for k, v in os.environ.items() if not k.startswith("BASIC_MEMORY_") and k != "HF_HUB_OFFLINE"}
+    env.update(HOME=str(home), USERPROFILE=str(home), BASIC_MEMORY_CONFIG_DIR=str(cfg), PYTHONIOENCODING="utf-8")
+    if offline:
+        env["HF_HUB_OFFLINE"] = "1"
+    return env
 
 
 def parse_json(stdout: str):
@@ -68,9 +79,7 @@ def main(argv=None) -> int:
     vault, cfg, home, backup = tmp / "vault", tmp / "cfg", tmp / "home", tmp / "backup"
     shutil.copytree(ROOT / "examples" / "demo-vault", vault)
     home.mkdir()
-    env = {**os.environ, "HOME": str(home), "USERPROFILE": str(home), "BASIC_MEMORY_CONFIG_DIR": str(cfg), "PYTHONIOENCODING": "utf-8"}
-    if a.offline:
-        env["HF_HUB_OFFLINE"] = "1"
+    env = isolated_env(cfg, home, a.offline)
     results: list[tuple[str, str]] = []
 
     def run(*args: str, extra_env: dict | None = None) -> subprocess.CompletedProcess:

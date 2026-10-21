@@ -5,7 +5,7 @@
 basic-memory 실행 파일의 shebang이 가리키는 Python(uv/pipx 설치 기준)으로 자동 재실행한다.
 찾지 못하면 그 Python을 직접 지정해 실행한다:  <basic-memory의 python> scripts/mcp_stdio_check.py
 
-격리: 임시 HOME / BASIC_MEMORY_CONFIG_DIR / Vault 사본만 쓴다. 실제 설정은 읽지도 쓰지도 않는다.
+격리: 임시 HOME / BASIC_MEMORY_CONFIG_DIR / Vault 사본만 쓰고 호출자의 BASIC_MEMORY_* 환경변수는 지운다. 실제 설정은 읽지도 쓰지도 않는다.
 문서화된 현재 요약 검색 레시피(search_type=text, metadata_filters, page_size=3)도 여기서 확인한다.
 이것은 'MCP 호출이 된다'는 확인이며 채팅 속 AI가 지침을 따르는지는 별개다.
 종료 코드: FAIL이 있으면 1, 2는 mcp를 쓸 수 없음. WARN(기본 검색이 빈 경우)은 실패가 아니다.
@@ -25,6 +25,13 @@ ROOT = Path(__file__).resolve().parent.parent
 PROJECT = "demo-vault"
 MARK = "MCP-MARK-91c2"
 HISTORY_TITLE = "2026-01-05-검색-검증"
+
+
+def isolated_env(cfg: Path, home: Path) -> dict:
+    """'격리' 실행용 환경. 호출자의 BASIC_MEMORY_*·HF_HUB_OFFLINE을 지우고 임시 HOME·설정 폴더만 가리키게 한다."""
+    env = {k: v for k, v in os.environ.items() if not k.startswith("BASIC_MEMORY_") and k != "HF_HUB_OFFLINE"}
+    env.update(HOME=str(home), USERPROFILE=str(home), BASIC_MEMORY_CONFIG_DIR=str(cfg), PYTHONIOENCODING="utf-8")
+    return env
 
 
 def find_basic_memory_python() -> str | None:
@@ -70,7 +77,7 @@ async def run_checks() -> int:
         vault, cfg, home = tmp / "vault", tmp / "cfg", tmp / "home"
         shutil.copytree(ROOT / "examples" / "demo-vault", vault)
         home.mkdir()
-        env = {**os.environ, "HOME": str(home), "USERPROFILE": str(home), "BASIC_MEMORY_CONFIG_DIR": str(cfg), "PYTHONIOENCODING": "utf-8"}
+        env = isolated_env(cfg, home)
         subprocess.run([exe, "project", "add", PROJECT, str(vault), "--local"], env=env, capture_output=True, check=True)
         subprocess.run([exe, "reindex", "--project", PROJECT, "--full"], env=env, capture_output=True)
         params = StdioServerParameters(command=exe, args=["mcp", "--project", PROJECT], env=env)
