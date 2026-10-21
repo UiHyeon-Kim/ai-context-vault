@@ -49,6 +49,14 @@ def find_basic_memory_python() -> str | None:
     return None
 
 
+def error_flag(result) -> bool:
+    """도구 호출 결과의 오류 플래그. mcp SDK 1.x는 isError, 2.x는 is_error라서 둘 다 본다."""
+    for name in ("isError", "is_error"):
+        if hasattr(result, name):
+            return bool(getattr(result, name))
+    return False
+
+
 def text_of(result) -> str:
     return "".join(getattr(c, "text", "") for c in result.content)
 
@@ -113,15 +121,15 @@ async def run_checks() -> int:
                 step("수정 후 재조회(기존 보존)", tx.count(f"{MARK}-A") == 1 and tx.count(f"{MARK}-B") == 1)
                 res = await call("edit_note", {"identifier": "Inbox/MCP 테스트 노트", "operation": "find_replace",
                                                "find_text": "존재하지 않는 문구", "content": "x"})
-                step("없는 문자열의 find_replace는 실패 응답(본문 'Edit Failed')", bool(res.isError) or "Edit Failed" in text_of(res),
-                     f"isError={res.isError} — 0.22.1에서는 isError=False로 오므로 응답 본문과 재조회로 판단해야 함")
+                step("없는 문자열의 find_replace는 실패 응답(본문 'Edit Failed')", error_flag(res) or "Edit Failed" in text_of(res),
+                     f"isError={error_flag(res)} — 0.22.1·0.23.2에서 isError=False로 오므로 응답 본문과 재조회로 판단해야 함")
                 res = await call("read_note", {"identifier": "Inbox/MCP 테스트 노트"})
                 step("실패한 수정이 기존 내용을 바꾸지 않음", text_of(res).count(f"{MARK}-A") == 1 and text_of(res).count(f"{MARK}-B") == 1)
                 # 알려진 주의 동작: 없는 노트에 append하면 오류 없이 새 노트가 만들어진다 (경로 오타가 조용히 새 노트가 됨)
                 res = await call("edit_note", {"identifier": "Inbox/오타난-경로", "operation": "append", "content": "x"})
                 made = await call("read_note", {"identifier": "Inbox/오타난-경로"})
                 step("없는 노트에 append하면 새 노트가 만들어짐(주의: 먼저 존재 확인)", "Created note" in text_of(res) and "x" in text_of(made),
-                     f"isError={res.isError}", warn_if_not=True)
+                     f"isError={error_flag(res)}", warn_if_not=True)
     except Exception as e:  # noqa: BLE001 - 진단 출력용
         step("MCP 세션", False, f"{type(e).__name__}: {e}")
     finally:
