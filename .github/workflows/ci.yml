@@ -62,6 +62,8 @@ jobs:
       - name: 격리 재현 (데모 Vault)
         run: python scripts/demo_roundtrip.py
       - name: 격리 재현 (임베딩 모델을 받을 수 없는 환경 흉내)
+        if: ${{ !cancelled() }}
         run: python scripts/demo_roundtrip.py --offline
       - name: MCP stdio 계층
+        if: ${{ !cancelled() }}
         run: python scripts/mcp_stdio_check.py

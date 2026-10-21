@@ -430,6 +430,35 @@ class MergeTests(unittest.TestCase):
         self.assertEqual(json.loads(j.read_text(encoding="utf-8-sig"))["theme"], "dark")
 
 
+class VersionDriftTests(unittest.TestCase):
+    """Basic Memory·mcp SDK 버전에 따라 달라지는 출력·필드를 판정 로직이 견디는지 (실제 출력 형태를 요약한 표본)."""
+
+    OK = "done Full-text search index rebuilt\ndone Embeddings complete: 5 entities embedded, 0 skipped, 0 errors\nReindex complete!"
+    OFFLINE_0_22 = "done Full-text search index rebuilt\ndone Embeddings complete: 0 entities embedded, 0 skipped, 5 errors\nReindex complete!"
+    OFFLINE_0_23 = ("done Full-text search index rebuilt\ndone Embeddings complete (index=sqlite-vec): 0 entities embedded, 0\nskipped, 5 errors\n"
+                    "Representative error: Could not load model\nReindex failed: all vector embedding attempts failed.")
+
+    def test_reindex_outcome_across_versions(self):
+        self.assertEqual(dr.reindex_outcome(0, self.OK), (True, "텍스트·임베딩 색인 완료"))
+        ok, detail = dr.reindex_outcome(0, self.OFFLINE_0_22)   # 0.22.1: 오프라인에서도 종료 코드 0
+        self.assertTrue(ok)
+        self.assertIn("임베딩 실패", detail)
+        ok, detail = dr.reindex_outcome(1, self.OFFLINE_0_23)   # 0.23.x: 종료 코드 1이지만 텍스트 색인은 완료
+        self.assertTrue(ok)
+        self.assertIn("종료 코드 1", detail)
+
+    def test_reindex_outcome_still_fails_when_text_index_is_missing(self):
+        self.assertFalse(dr.reindex_outcome(1, "Traceback ...")[0])
+        self.assertFalse(dr.reindex_outcome(1, "Reindex failed: all vector embedding attempts failed.")[0])
+
+    def test_error_flag_handles_both_sdk_field_names(self):
+        from types import SimpleNamespace
+        self.assertTrue(mcs.error_flag(SimpleNamespace(isError=True)))
+        self.assertTrue(mcs.error_flag(SimpleNamespace(is_error=True)))
+        self.assertFalse(mcs.error_flag(SimpleNamespace(is_error=False)))
+        self.assertFalse(mcs.error_flag(SimpleNamespace()))
+
+
 class IsolationTests(unittest.TestCase):
     def test_isolated_env_drops_callers_basic_memory_settings(self):
         leaked = {"BASIC_MEMORY_DEFAULT_SEARCH_TYPE": "text", "BASIC_MEMORY_HOME": "/real/notes", "HF_HUB_OFFLINE": "1"}
