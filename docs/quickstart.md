@@ -2,8 +2,8 @@
 
 목표: “README 읽기 → 검색 → 기록 → 재조회”가 되는 상태 만들기 (소요 시간은 측정하지 않았음)
 먼저 연습하려면 저장소의 [데모 Vault](../examples/demo-vault/README.md)를 복사해서 쓰면 됨 (가상 프로젝트, 개인 정보 없음)
-검증한 환경: macOS + Basic Memory 0.22.1. Windows·Linux는 단위 테스트와 Basic Memory 연동 시험이 CI에서 통과했고 클라이언트 연결·실사용은 미검증 ([지원 환경](status.md#지원-환경))
-아래 셸 예시는 POSIX(macOS·Linux) 문법임. Windows에서는 경로 표기와 명령을 환경에 맞게 바꿔야 하며 검증하지 않았음
+지원 환경: macOS + Basic Memory 0.22.1 (직접 검증). Linux·Windows는 지원 대상이 아니며 단위 테스트와 Basic Memory 연동 시험이 CI에서 통과한 사실만 있음 ([지원 환경](status.md#지원-환경))
+아래 셸 예시는 macOS 셸(zsh·bash) 기준임
 
 ## 0. 준비물
 

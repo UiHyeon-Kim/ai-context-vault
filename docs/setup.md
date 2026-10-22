@@ -1,7 +1,7 @@
 # 연결 설정 예시
 
 검증 환경은 macOS 27(2026-10 기준), Basic Memory 0.22.1, tunnel-client 0.0.15였음
-Windows·Linux는 단위 테스트와 Basic Memory 연동 시험(격리 환경)만 CI에서 확인했고 Codex·Claude·ChatGPT 등 클라이언트 연결과 실사용은 직접 검증하지 않았음. Basic Memory·MCP 부분은 OS 공통 개념이지만 경로 표기와 명령은 환경별로 확인해야 함 ([지원 환경 표](status.md#지원-환경))
+지원 환경은 macOS임. Linux·Windows는 지원 대상이 아니며 단위 테스트와 Basic Memory 연동 시험(격리 환경)이 CI에서 통과한 사실만 있고 Codex·Claude·ChatGPT 등 클라이언트 연결과 실사용은 검증하지 않았음 ([지원 환경 표](status.md#지원-환경))
 아래는 기존 정상 구성을 옮기기 위한 예시이며 다른 OS·버전에서 자동 설치까지 검증한 패키지가 아님
 기존 사용자 설정 파일을 예시 파일로 통째로 덮어쓰지 않고 필요한 항목만 병합함
 
@@ -61,7 +61,7 @@ tunnel-client run \
 ## 로그인 시 자동 실행 (macOS 예시)
 
 이 절은 macOS LaunchAgent 전용이며 ChatGPT 터널을 상시 쓰는 경우에만 필요함. 로컬 MCP(Codex·Claude)만 쓰면 건너뜀
-Windows는 작업 스케줄러, Linux는 systemd 사용자 서비스 같은 해당 OS의 방식을 써야 하며 이 저장소는 예시를 제공하지 않고 검증하지도 않았음
+Linux·Windows는 지원 대상이 아니라 자동 실행 예시를 제공하지 않고 검증하지도 않았음
 
 [LaunchAgent 예시](../examples/com.example.ai-vault-tunnel.plist)의 모든 절대 경로를 바꾸고 사용자 `~/Library/LaunchAgents/` 아래에 설치함
 plist 안의 `~`나 `$HOME`은 셸처럼 자동 확장되지 않으므로 실제 절대 경로가 필요함
