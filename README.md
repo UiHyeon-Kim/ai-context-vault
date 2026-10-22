@@ -92,7 +92,7 @@ Claude Code는 `claude mcp add --scope user …`, Codex는 `codex mcp add …` �
 
 | 검증 | 결과 |
 |---|---|
-| 단위 테스트 `python3 -m unittest discover -s tests` | 47개 통과 (macOS: Python 3.11·3.12·3.14·3.15) |
+| 단위 테스트 `python3 -m unittest discover -s tests` | 52개 통과 (macOS: Python 3.11·3.12·3.14·3.15) |
 | GitHub Actions 단위 테스트 (`.github/workflows/ci.yml`) | Ubuntu·Windows × Python 3.11·3.13, 4개 잡 모두 통과 (2026-10-22 첫 실행) |
 | GitHub Actions 연동 시험 (`integration` 잡) | Ubuntu·Windows + Basic Memory 0.22.1: 격리 재현 15/15, 오프라인 흉내 14+경고 1, MCP 11/11 (2026-10-22). 최신 버전 0.23.2는 실험적 잡으로 감시 |
 | 격리 환경 재현 `python3 scripts/demo_roundtrip.py` | 15/15 — 등록, 사전 검사, 한글 검색, 현재 요약/이력 필터, 읽기, 작성·수정·재조회, 백업 리허설 |
