@@ -59,7 +59,7 @@ Claude Code는 `claude mcp add --scope user …`, Codex는 `codex mcp add …` �
 그다음 새 채팅에서 [연결 시험 문구](prompts/roundtrip-test.md)로 읽기 → 검색 → 기록 → 재조회를 확인한다
 먼저 연습하려면 [데모 Vault](examples/demo-vault/README.md)를 복사해 등록한다 (가상 데이터)
 
-> 지원 환경: macOS에서 직접 검증(Basic Memory 0.22.1). Windows·Linux는 단위 테스트만 GitHub Actions로 확인했고 Basic Memory 연동·실사용은 **미검증**
+> 지원 환경: **macOS**(직접 검증, Basic Memory 0.22.1). Linux·Windows는 지원 대상이 아니다. GitHub Actions에서 단위 테스트와 Basic Memory 연동 시험이 통과한 사실은 있으나 클라이언트 연결·실사용은 검증하지 않았다 ([지원 환경](docs/status.md#지원-환경))
 
 ## 사용 예시
 
@@ -92,20 +92,22 @@ Claude Code는 `claude mcp add --scope user …`, Codex는 `codex mcp add …` �
 
 | 검증 | 결과 |
 |---|---|
-| 단위 테스트 `python3 -m unittest discover -s tests` | 47개 통과 (macOS: Python 3.11·3.12·3.14·3.15) |
+| 단위 테스트 `python3 -m unittest discover -s tests` | 52개 통과 (macOS: Python 3.11·3.12·3.14·3.15) |
 | GitHub Actions 단위 테스트 (`.github/workflows/ci.yml`) | Ubuntu·Windows × Python 3.11·3.13, 4개 잡 모두 통과 (2026-10-22 첫 실행) |
+| GitHub Actions 연동 시험 (`integration` 잡) | Ubuntu·Windows + Basic Memory 0.22.1: 격리 재현 15/15, 오프라인 흉내 14+경고 1, MCP 11/11 (2026-10-22). 최신 버전 0.23.2는 실험적 잡으로 감시 |
 | 격리 환경 재현 `python3 scripts/demo_roundtrip.py` | 15/15 — 등록, 사전 검사, 한글 검색, 현재 요약/이력 필터, 읽기, 작성·수정·재조회, 백업 리허설 |
 | 네트워크 차단 시뮬레이션 `--offline` | 14 통과 + 경고 1 (기본 hybrid 검색이 0건, 텍스트 검색은 정상) |
 | MCP stdio 계층 `python3 scripts/mcp_stdio_check.py` | 11/11 |
 | 실제 설정·Vault 읽기 전용 점검 `vault_doctor.py` | 오류 0건 (수정 없음) |
-| 실제 ChatGPT/Codex/Claude 채팅 연결 | 2026-10 개인 환경 기록만 있음 ([검증 현황](docs/verification.md)) |
+| 실제 ChatGPT/Codex/Claude 채팅 연결 | 작성자 환경 기록(재현 불가)만 있음, 2026-10 ([검증 현황](docs/verification.md)) |
 
 “MCP 호출이 된다”와 “채팅 속 AI가 지침을 따른다”는 서로 다른 검증이며, 후자는 이번 도구들로 보장하지 않는다
 
 ## 한계
 
 - 전체 대화를 동기화하지 않는다. **저장한 노트만** 공유된다
-- AI가 지침을 항상 따른다는 보장이 없다. 중요한 인계는 저장 위치를 명시하고 재조회로 확인한다
+- 지원 환경은 macOS뿐이다. Linux·Windows는 지원하지 않으며 해당 환경의 문제는 처리하지 않을 수 있다 (CI 통과 사실은 보장이 아니다)
+- AI가 지침을 항상 따른다는 보장이 없다. 중요한 인계는 저장 위치를 명시하고 재조회로 확인한다. 채팅에서 규칙을 따르는지 확인하는 절차는 [채팅 검증](docs/chat-verification.md)
 - 쓰기 안전은 서버 기능이 아니라 운영 규칙이다 — 확인 없는 `append` 반복은 중복되고, 없는 노트에 `append`하면 오류 없이 새 노트가 만들어지며, 편집 실패가 `isError` 없이 올 수 있다 (모두 시험으로 확인)
 - 새 Vault는 색인 전 검색이 비어 있을 수 있다. 첫 실행에서 Basic Memory가 임베딩 모델을 내려받으며, 받지 못하면 기본(hybrid) 검색이 비므로 `search_type=text`를 쓴다
 - ChatGPT·dots 사용 시 Vault가 있는 컴퓨터가 켜져 있고 터널이 동작해야 한다. 요금·플랜은 각 서비스 기준이다
@@ -118,7 +120,7 @@ Claude Code는 `claude mcp add --scope user …`, Codex는 `codex mcp add …` �
 
 ## 문서 목록
 
-[빠른 시작](docs/quickstart.md) · [이름 구분](docs/naming.md) · [설정](docs/setup.md) · [사용법](docs/usage.md) · [노트 구조](docs/context-structure.md) · [오류 대응](docs/troubleshooting.md) · [유지보수](docs/maintenance.md) · [기능 상태](docs/status.md) · [검증 현황](docs/verification.md) · [라이선스](docs/license-options.md)
+[빠른 시작](docs/quickstart.md) · [이름 구분](docs/naming.md) · [설정](docs/setup.md) · [사용법](docs/usage.md) · [노트 구조](docs/context-structure.md) · [오류 대응](docs/troubleshooting.md) · [채팅 검증](docs/chat-verification.md) · [유지보수](docs/maintenance.md) · [기능 상태](docs/status.md) · [검증 현황](docs/verification.md) · [라이선스](docs/license-options.md)
 [공통 지침](prompts/shared-context.md) · [연결 시험](prompts/roundtrip-test.md) · [인계 양식](templates/handoff.md) · [이력 양식](templates/history.md) · [Vault README 양식](templates/vault-readme.md)
 
 ## 이 저장소에 넣지 않는 것

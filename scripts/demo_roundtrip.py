@@ -25,6 +25,7 @@ if sys.version_info < (3, 11):
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -45,6 +46,19 @@ def isolated_env(cfg: Path, home: Path, offline: bool = False) -> dict:
     if offline:
         env["HF_HUB_OFFLINE"] = "1"
     return env
+
+
+def reindex_outcome(returncode: int, stdout: str) -> tuple[bool, str]:
+    """`reindex --full` 결과 판정. 임베딩 모델을 받지 못하면 Basic Memory 0.22.1은 종료 코드 0으로,
+    0.23.x는 'Reindex failed'와 함께 0이 아닌 코드로 끝나지만 텍스트 색인은 모두 만들어진다.
+    텍스트 색인이 완료됐으면 통과로 보고 임베딩 실패는 설명에 적는다(기본 검색 단계가 따로 확인한다)."""
+    low = stdout.lower()
+    text_done = "full-text search index rebuilt" in low
+    emb_failed = bool(re.search(r"\b[1-9]\d* errors\b", stdout)) or "reindex failed" in low
+    if emb_failed:
+        return text_done, (f"텍스트 색인 완료, 임베딩 실패(모델을 받지 못한 환경일 수 있음, 종료 코드 {returncode})" if text_done
+                           else f"텍스트 색인이 만들어지지 않음(종료 코드 {returncode})")
+    return returncode == 0, "텍스트·임베딩 색인 완료" if returncode == 0 else f"색인 실패(종료 코드 {returncode})"
 
 
 def parse_json(stdout: str):
@@ -103,8 +117,8 @@ def main(argv=None) -> int:
         step("vault_doctor 사전 검사", d.returncode == 0, "오류 0건" if d.returncode == 0 else d.stdout[-300:])
 
         ri = run("reindex", "--project", PROJECT, "--full")  # CLI 단독 사용 시 색인을 먼저 만들어야 검색됨
-        emb_failed = "errors" in ri.stdout and " 0 errors" not in ri.stdout
-        step("색인(reindex --full)", ri.returncode == 0, "임베딩 오류 있음(모델을 받지 못한 환경일 수 있음)" if emb_failed else "텍스트·임베딩 색인 완료")
+        ok, detail = reindex_outcome(ri.returncode, ri.stdout)
+        step("색인(reindex --full)", ok, detail)
 
         t1 = titles(tool("search-notes", "클라우드", search_type="text"))
         step("한글 텍스트 검색 '클라우드' → 해당 노트만", t1 == ["Sample-Notes-App"], f"결과 {t1}")
