@@ -2,7 +2,7 @@
 
 목표: “README 읽기 → 검색 → 기록 → 재조회”가 되는 상태 만들기 (소요 시간은 측정하지 않았음)
 먼저 연습하려면 저장소의 [데모 Vault](../examples/demo-vault/README.md)를 복사해서 쓰면 됨 (가상 프로젝트, 개인 정보 없음)
-지원 환경: macOS + Basic Memory 0.22.1 (직접 검증). Linux·Windows는 지원 대상이 아니며 단위 테스트와 Basic Memory 연동 시험이 CI에서 통과한 사실만 있음 ([지원 환경](status.md#지원-환경))
+문서·양식은 OS와 무관함. 연결 과정은 macOS + Basic Memory 0.22.1에서 직접 검증했고 Linux·Windows는 단위 테스트와 Basic Memory 연동 CI 시험만 확인함. 클라이언트 연결·실사용은 미검증 ([지원 환경](status.md#지원-환경))
 아래 셸 예시는 macOS 셸(zsh·bash) 기준임
 
 ## 0. 준비물
@@ -79,6 +79,7 @@ Claude Desktop은 `--format claude-json`에 위 경로를 `--target`으로 지�
 
 ## 6. 평소 사용
 
+[초기 설정 안내](agent-setup.md)에서 AI·적용 범위·Vault·저장 방식을 선택하고 지속 지침에 등록하면 “Vault에 기록해줘”처럼 짧게 요청할 수 있음
 [평소 사용하는 방법](usage.md)의 문구로 재개·저장·인계를 요청함. 공통 지침은 [prompts/shared-context.md](../prompts/shared-context.md)
 수정 전에는 대상 노트가 실제로 있는지 먼저 읽어 확인함 — 없는 노트에 `append`하면 오류 없이 새 노트가 만들어지고, 편집 실패는 `isError` 없이 응답 본문(`# Edit Failed`)으로 옴 ([오류 대응](troubleshooting.md))
 
