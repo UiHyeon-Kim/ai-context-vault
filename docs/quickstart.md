@@ -8,7 +8,7 @@
 ## 0. 준비물
 
 - **Python 3.11 이상**: `python3 --version`으로 확인. 검증한 Mac의 기본 `/usr/bin/python3`는 3.9라서(다른 macOS 버전은 확인하지 않음) 이 저장소의 스크립트가 “Python 3.11 이상이 필요합니다” 메시지로 멈춤. 이때는 3.11 이상 인터프리터(예: Homebrew의 `python3.12`)로 실행
-- [Basic Memory 설치](https://docs.basicmemory.com/start-here/quickstart-local) 완료, `basic-memory --version` 동작. 검증한 버전을 고정해 설치하려면 `uv tool install basic-memory==0.22.1` 또는 `pip install basic-memory==0.22.1` (둘 다 임시 환경에서 설치·실행을 확인했고, pip 방식은 CI에서도 확인). Basic Memory 패키지 자체는 Python 3.12 이상을 요구함(PyPI 메타데이터)
+- [Basic Memory 설치](https://docs.basicmemory.com/start-here/quickstart-local) 완료, `basic-memory --version` 동작. 이번 호환성 검증 버전은 **1.0.0**이며 고정 설치 예시는 `uv tool install basic-memory==1.0.0` 또는 `pip install basic-memory==1.0.0`임. 이번에는 이미 설치된 1.0.0을 사용했고 새 설치 명령은 실행하지 않았음. 0.22.1은 이전 설치·CI 검증 버전임. Basic Memory 패키지 자체는 Python 3.12 이상을 요구함(PyPI 메타데이터)
 - Markdown 폴더 하나 (Obsidian Vault여도 되고 새 폴더여도 됨). 기존 노트가 있으면 **먼저 폴더를 통째로 백업** ([백업·복구](maintenance.md))
 
 ## 1. 이름 정하기

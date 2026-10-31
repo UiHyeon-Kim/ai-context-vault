@@ -31,7 +31,7 @@
 
 ## 시작하기
 
-준비물은 **Python 3.11 이상 · Basic Memory · MCP 연결을 지원하는 AI**입니다.
+준비물은 **Python 3.12 이상 · Basic Memory · MCP 연결을 지원하는 AI**입니다. 저장소의 보조 스크립트만 실행할 때는 Python 3.11 이상이면 됩니다.
 
 ```sh
 git clone https://github.com/UiHyeon-Kim/ai-context-vault.git
@@ -63,7 +63,7 @@ CLI나 슬래시 명령이 아닌 자연어 요청입니다. AI마다 같은 Vau
 ## 알아둘 점
 
 - **저장한 노트만 공유합니다.** 전체 대화의 실시간 동기화나 자동 요약 서비스는 아닙니다.
-- **실제 저장을 확인하세요.** AI의 완료 답변뿐 아니라 노트를 다시 읽어 확인합니다. 새 초기 설정 스킬의 앱별 설치·자동 선택은 아직 미검증입니다.
+- **실제 저장을 확인하세요.** AI의 완료 답변뿐 아니라 노트를 다시 읽어 확인합니다. 초기 설정 스킬은 macOS의 Codex CLI·Claude Code 임시 환경에서 자동 발견·지침 등록·새 세션 저장까지 확인했습니다. 실제 사용자 프로필과 다른 앱의 같은 흐름은 미검증입니다.
 - **연결 방식은 AI마다 다릅니다.** MCP 지원 여부·인증·권한을 확인해야 합니다. 원격 연결은 Vault 컴퓨터와 연결 서비스가 실행 중이어야 합니다.
 
 <details>
@@ -78,8 +78,8 @@ flowchart TB
 ```
 
 Codex·Claude Code·Claude Desktop·ChatGPT·dots의 기존 연결 기록이 있습니다. 다른 AI는 개별 시험이 필요합니다.
-CI의 고정 연동 시험 대상은 Basic Memory 0.22.1이며 최신 버전은 실험적으로 확인합니다.
-[검증 기록](docs/verification.md) · [실제 채팅 검증](docs/chat-verification.md) · [기능별 범위](docs/status.md)
+Basic Memory 1.0.0의 텍스트 검색·저장·수정·재조회를 macOS 임시 환경에서 확인했습니다. 온라인 의미 검색은 이번 검증에 포함하지 않았습니다. CI의 고정 연동 시험 대상은 Basic Memory 0.22.1이며 최신 버전은 실험적입니다.
+[1.0 호환성](docs/basic-memory-compatibility.md) · [초기 설정 검증](docs/setup-skill-verification.md) · [기존 연결 기록](docs/verification.md) · [실제 채팅 검증](docs/chat-verification.md) · [기능별 범위](docs/status.md)
 
 </details>
 
