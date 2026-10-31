@@ -24,7 +24,7 @@ Vault의 README에 폴더 책임, 정본 위치, 출처·검증 규칙을 둠
 - Codex는 [TOML 예시](../examples/codex-mcp.toml)를 기존 설정에 병합함 (`codex mcp add` 공식 명령도 있음)
 - Claude Code는 `claude mcp add --scope user …`를 사용함. `~/.claude.json`은 앱이 계속 다시 쓰는 상태 파일이므로 직접 편집·병합하지 않음
 - Claude Desktop은 [stdio JSON 예시](../examples/claude-mcp.json)를 설정 JSON에 병합함
-- 등록 명령과 병합 도구 사용법, 각각 검증한 범위는 [빠른 시작](quickstart.md#4-ai-클라이언트에-연결)에 정리함. `scripts/vault_doctor.py --config`로 설정 파일의 자리 표시자·경로·프로젝트 ID 불일치를 검사할 수 있음
+- 등록 명령과 병합 도구 사용법, 각각 검증한 범위는 [빠른 시작](quickstart.md#3-사용할-ai-연결)에 정리함. `scripts/vault_doctor.py --config`로 설정 파일의 자리 표시자·경로·프로젝트 ID 불일치를 검사할 수 있음
 - 실행 파일 경로는 실제 설치 위치의 절대 경로를 사용함
 - `mcp --project ai-vault`로 연결할 보관함 범위를 지정함
 - 설정을 저장한 뒤 클라이언트에서 연결을 다시 불러오거나 새 채팅을 열어 도구 노출을 확인함

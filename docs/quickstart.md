@@ -1,54 +1,116 @@
 # 빠른 시작: 설치부터 첫 기록까지
 
-목표: “README 읽기 → 검색 → 기록 → 재조회”가 되는 상태 만들기 (소요 시간은 측정하지 않았음)
-먼저 연습하려면 저장소의 [데모 Vault](../examples/demo-vault/README.md)를 복사해서 쓰면 됨 (가상 프로젝트, 개인 정보 없음)
-문서·양식은 OS와 무관함. 연결 과정은 macOS + Basic Memory 0.22.1에서 직접 검증했고 Linux·Windows는 단위 테스트와 Basic Memory 연동 CI 시험만 확인함. 클라이언트 연결·실사용은 미검증 ([지원 환경](status.md#지원-환경))
-아래 셸 예시는 macOS 셸(zsh·bash) 기준임
+**폴더 등록 → AI 연결 → 규칙 등록 → 저장 확인** 순서로 진행합니다.
+아래 명령은 macOS의 zsh·bash 기준입니다. Windows·Linux의 실제 앱 연결은 미검증입니다. [환경별 확인 범위](status.md#지원-환경)
 
 ## 0. 준비물
 
-- **Python 3.11 이상**: `python3 --version`으로 확인. 검증한 Mac의 기본 `/usr/bin/python3`는 3.9라서(다른 macOS 버전은 확인하지 않음) 이 저장소의 스크립트가 “Python 3.11 이상이 필요합니다” 메시지로 멈춤. 이때는 3.11 이상 인터프리터(예: Homebrew의 `python3.12`)로 실행
-- [Basic Memory 설치](https://docs.basicmemory.com/start-here/quickstart-local) 완료, `basic-memory --version` 동작. 이번 호환성 검증 버전은 **1.0.0**이며 고정 설치 예시는 `uv tool install basic-memory==1.0.0` 또는 `pip install basic-memory==1.0.0`임. 이번에는 이미 설치된 1.0.0을 사용했고 새 설치 명령은 실행하지 않았음. 0.22.1은 이전 설치·CI 검증 버전임. Basic Memory 패키지 자체는 Python 3.12 이상을 요구함(PyPI 메타데이터)
-- Markdown 폴더 하나 (Obsidian Vault여도 되고 새 폴더여도 됨). 기존 노트가 있으면 **먼저 폴더를 통째로 백업** ([백업·복구](maintenance.md))
+| 준비물 | 확인 방법 |
+|---|---|
+| Python 3.12 이상 | `python3 --version` |
+| [Basic Memory 설치](https://docs.basicmemory.com/start-here/quickstart-local) | `basic-memory --version` |
+| Markdown 폴더 | 새 폴더 또는 Obsidian Vault |
 
-## 1. 이름 정하기
+**기존 노트를 사용한다면 먼저 [백업](maintenance.md)하세요.**
 
-기본값을 쓰면 됨: 프로젝트 ID `ai-vault`, 폴더 `AI-Vault`. 다른 이름을 쓰려면 먼저 [이름 구분](naming.md) 확인
+<details>
+<summary>Python·Basic Memory 버전 설명</summary>
 
-## 2. 프로젝트 등록
+- Basic Memory는 Python 3.12 이상, 이 저장소의 보조 스크립트는 Python 3.11 이상이 필요합니다.
+- `python3`가 구버전이면 설치된 최신 인터프리터(예: `python3.12`)로 명령을 실행하세요.
+- 현재 격리 호환성 검증 버전은 Basic Memory 1.0.0입니다. 0.22.1은 이전 설치·CI 검증 버전입니다.
+- 버전 고정 설치 예시: `uv tool install basic-memory==1.0.0` 또는 `pip install basic-memory==1.0.0`. 이번 1.0 시험은 이미 설치된 패키지로 진행했으며 새 설치 명령 자체는 실행하지 않았습니다.
+
+[버전별 검증 결과](basic-memory-compatibility.md)
+
+</details>
+
+## 1. 폴더 등록
+
+프로젝트 ID는 기본 `ai-vault`를 사용합니다. 아래 경로를 실제 폴더 경로로 바꾸세요.
 
 ```sh
 basic-memory project add ai-vault /ABSOLUTE/PATH/AI-Vault --local
 ```
 
-연습용이라면 데모 폴더를 **복사해서** 등록함 (원본 데모를 수정하지 않기 위해). `/tmp/demo-vault`는 예시 경로임
+부르기 쉬운 호칭은 4단계에서 고릅니다. 실제 ID·폴더명과의 차이는 [이름 안내](naming.md)를 참고하세요.
+
+<details>
+<summary>개인 노트 대신 데모로 연습하기</summary>
+
+원본을 수정하지 않도록 [가상 데모 Vault](../examples/demo-vault/README.md)를 복사해서 사용합니다. `/tmp/demo-vault`는 예시 경로이며 기존 폴더와 겹치지 않게 정하세요.
 
 ```sh
 cp -R examples/demo-vault /tmp/demo-vault
 basic-memory project add demo-vault /tmp/demo-vault --local
 ```
 
-## 3. 사전 검사
+데모를 골랐다면 이후 명령의 경로와 프로젝트 ID도 데모 값으로 바꾸세요.
+
+</details>
+
+## 2. 연결 전 검사
 
 ```sh
 python3 scripts/vault_doctor.py --vault /ABSOLUTE/PATH/AI-Vault --project ai-vault
 ```
 
-확인하는 것: 실행 파일, Vault 폴더와 README, 프로젝트 ID와 폴더의 일치, 비밀값처럼 보이는 문자열(값은 출력하지 않음). 읽기 전용이며 아무것도 수정하지 않음
-`[FAIL]`이 있으면 메시지대로 고친 뒤 다시 실행함. 4단계에서 설정 파일을 만든 뒤에는 `--config 파일경로`를 붙여 같은 검사를 한 번 더 실행함 (MCP 설정, 터널 프로필, LaunchAgent plist 지원)
+`[FAIL]`이 있으면 안내에 따라 수정한 뒤 다시 실행하세요. 이 검사는 읽기 전용입니다.
 
-## 4. AI 클라이언트에 연결
+<details>
+<summary>무엇을 검사하나요?</summary>
 
-클라이언트마다 등록 방법이 다르며, 가능하면 **해당 앱이 제공하는 공식 명령**을 먼저 고려함 (앱이 설정 파일을 직접 관리하므로)
+실행 파일, 폴더와 README, 등록된 프로젝트 경로, 비밀값처럼 보이는 문자열을 검사합니다. 값은 출력하지 않습니다.
+AI 설정 파일을 만든 뒤에는 `--config 파일경로`를 붙여 다시 검사할 수 있습니다. MCP 설정·터널 프로필·LaunchAgent plist를 지원합니다.
 
-| 클라이언트 | 방법 | 이 저장소에서 확인한 범위 |
-|---|---|---|
-| Claude Code | `claude mcp add --scope user basic-memory -- /ABSOLUTE/PATH/basic-memory mcp --project ai-vault` | 문법은 `claude mcp add --help` 기준이며 **실행하지 않음**. `~/.claude.json`은 앱이 계속 다시 쓰는 상태 파일이라 `merge_mcp_config.py`는 이 파일의 적용을 거부함 |
-| Codex | `codex mcp add basic-memory -- /ABSOLUTE/PATH/basic-memory mcp --project ai-vault` 또는 아래 병합 도구 | 문법은 `codex mcp add --help` 기준이며 실행하지 않음. 도움말에는 타임아웃 옵션이 없어서 [예시](../examples/codex-mcp.toml)의 타임아웃 값(120초)이 필요하면 실행 후 `config.toml`에 직접 추가해야 할 수 있음 (실행 결과는 미확인) |
-| Claude Desktop | 설정 JSON에 병합 (macOS 경로: `~/Library/Application Support/Claude/claude_desktop_config.json`) | 병합 도구는 임시 파일로 검증. 다른 OS의 경로는 확인하지 않았으니 앱 문서를 확인 |
-| ChatGPT·dots | [설정 방법](setup.md)의 터널 절차 | 이 작업에서는 재검증하지 않음 |
+</details>
 
-### 설정 파일 병합 도구 (미리보기 → 적용)
+## 3. 사용할 AI 연결
+
+**사용할 앱 하나만 골라** 해당 부분을 펼치세요. `/ABSOLUTE/PATH/basic-memory`는 설치된 실행 파일 경로로 바꿉니다.
+아래 Codex·Claude 등록 명령은 도움말 기준 예시이며 실행 검증한 명령은 아닙니다.
+
+<details>
+<summary>Codex</summary>
+
+```sh
+codex mcp add basic-memory -- /ABSOLUTE/PATH/basic-memory mcp --project ai-vault
+```
+
+시작 시간이 부족하면 [설정 예시](../examples/codex-mcp.toml)의 타임아웃을 참고하세요. `mcp add` 도움말에는 타임아웃 옵션이 없어 직접 추가가 필요할 수 있습니다(실행 결과 미확인).
+
+</details>
+
+<details>
+<summary>Claude Code</summary>
+
+```sh
+claude mcp add --scope user basic-memory -- /ABSOLUTE/PATH/basic-memory mcp --project ai-vault
+```
+
+`~/.claude.json`은 앱이 관리하는 상태 파일입니다. 아래 병합 도구로 직접 수정하지 마세요.
+
+</details>
+
+<details>
+<summary>Claude Desktop</summary>
+
+설정 JSON의 `mcpServers`에 [연결 예시](../examples/claude-mcp.json)를 기존 내용을 보존하며 반영합니다.
+macOS 경로는 `~/Library/Application Support/Claude/claude_desktop_config.json`입니다. 다른 OS는 앱 문서에서 경로를 확인하세요.
+아래 병합 도구를 사용한다면 `--format claude-json`과 이 경로를 지정합니다.
+
+</details>
+
+<details>
+<summary>ChatGPT·dots</summary>
+
+[원격 연결 안내](setup.md)의 터널 절차를 따르세요. 이번 수정에서는 원격 연결을 재검증하지 않았습니다.
+
+</details>
+
+<details>
+<summary>대안: 설정 파일 병합 도구 사용하기</summary>
+
 
 기존 설정을 덮어쓰지 않고 `basic-memory` 항목만 추가함. 먼저 **미리보기**만 실행됨 (파일 변경 없음)
 
@@ -63,11 +125,26 @@ Claude Desktop은 `--format claude-json`에 위 경로를 `--target`으로 지�
 
 설정을 반영하려면 클라이언트를 재시작하거나 새 채팅을 엶. 설정 파일이 맞는 것과 채팅에서 도구가 보이는 것은 별개임
 
-## 5. 첫 기록 (연결 시험)
+</details>
 
-새 채팅에서 [연결 시험 문구](../prompts/roundtrip-test.md)를 그대로 보냄. 기대 결과: README 읽기 → 한글 검색 → 시험 노트에 표식 1회 기록 → 재조회로 확인
+연결 설정 후 앱을 재시작하거나 새 채팅을 열어 도구가 보이는지 확인하세요.
 
-### 처음 검색이 0건일 때
+## 4. 이름·저장 규칙 등록
+
+[초기 설정 안내](agent-setup.md)에 따라 스킬을 설치하거나 파일을 읽게 한 뒤 요청합니다.
+
+> Vault 초기 설정해줘. 이 프로젝트에서 ai-vault를 사용하고, 호칭은 내 메모장, 저장은 요청할 때만 해줘.
+
+## 5. 첫 기록 확인
+
+새 채팅에 [연결 시험 문구](../prompts/roundtrip-test.md)를 보내세요.
+**README 읽기 → 검색 → 표식 1회 저장 → 재조회**까지 확인하면 됩니다.
+
+검색이 비거나 임베딩 오류가 나면 텍스트 검색으로 다시 찾으세요. 1.0은 `mode=text`, 0.x는 `search_type=text`입니다.
+
+<details>
+<summary>검색이 안 될 때의 원인·버전별 동작</summary>
+
 
 아래 설명은 Basic Memory 0.x에서 관찰한 동작임. 1.0은 등록 시 색인을 기다리며, 검색 인자는 `mode=text`·`filters`를 사용함. 임베딩 오류와 버전별 차이는 [1.0 호환성 검증](basic-memory-compatibility.md)을 참고함
 
@@ -79,13 +156,18 @@ Claude Desktop은 `--format claude-json`에 위 경로를 `--target`으로 지�
 임베딩에 관한 사실: 기본 설정은 로컬 실행(fastembed)이며 모델 이름이 `bge-small-en-v1.5`(영어 모델 이름)임. 첫 실행 때 모델 파일을 Hugging Face에서 내려받음. 노트 내용을 외부로 보내는지는 네트워크 트래픽을 측정하지 않아 확인하지 못했고, 기본 provider가 로컬이라는 설정만 확인함. 한글 의미 검색의 품질은 평가하지 않았음 (5개 노트의 데모에서는 관련 노트가 1순위였으나 표본이 작음)
 이 저장소의 현재 요약 검색 예시는 처음부터 텍스트 검색(1.0: `mode: text`, 0.x: `search_type: text`)을 쓰므로 이 문제의 영향을 받지 않음 ([노트 구조](context-structure.md))
 
-## 6. 평소 사용
+</details>
 
-[초기 설정 안내](agent-setup.md)에서 AI·적용 범위·Vault·저장 방식을 선택하고 지속 지침에 등록하면 “Vault에 기록해줘”처럼 짧게 요청할 수 있음
-[평소 사용하는 방법](usage.md)의 문구로 재개·저장·인계를 요청함. 공통 지침은 [prompts/shared-context.md](../prompts/shared-context.md)
-수정 전에는 대상 노트가 실제로 있는지 먼저 읽어 확인함 — 0.x에서는 없는 노트에 `append`하면 새 노트가 만들어지고, 편집 실패가 오류 플래그 없이 올 수 있음. 1.0에서는 없는 노트의 편집을 거절함 ([오류 대응](troubleshooting.md))
+이제 **“내 메모장에 기록해줘”**처럼 [짧게 요청](usage.md)할 수 있습니다.
+문제가 남으면 [오류 대응](troubleshooting.md)을 확인하세요. 수정 전 기존 노트 조회와 저장 후 재조회는 항상 필요합니다.
 
-## 7. 문제가 생기면
+<details>
+<summary>실제 설정을 건드리지 않고 도구 계층 시험하기</summary>
 
-[오류 대응](troubleshooting.md) → 해결되지 않으면 `vault_doctor.py`를 다시 실행해 설정 불일치부터 제거함
-설치가 잘 됐는지 격리된 임시 환경에서 재현해 보려면 `python3 scripts/demo_roundtrip.py` (실제 설정·Vault를 건드리지 않음)
+```sh
+python3 scripts/demo_roundtrip.py --offline
+```
+
+임시 Vault·설정·DB를 사용하고 종료 시 정리합니다. 임베딩을 받을 수 없는 조건이라 기본 검색 경고가 날 수 있습니다. [시험 범위](basic-memory-compatibility.md)
+
+</details>
