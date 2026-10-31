@@ -1,139 +1,94 @@
-# AI Context Vault
+# AI-Vault
 
-여러 AI(ChatGPT, Codex, Claude 등)가 **같은 Markdown 노트를 읽고 써서 작업 맥락을 이어 가게 하는 설정·운영 starter kit**
+**AI를 바꿔도, 하던 작업을 이어가세요.**
 
-개인 노트 백업 저장소가 아니다. 연결 설정 예시, 기록 규칙, 인계 양식, 설치 점검 도구, 가상 데모 Vault를 담았다
+중요한 결정과 남은 일을 Markdown 노트에 저장하고 다른 AI가 읽어 이어갑니다.
+[Basic Memory](https://docs.basicmemory.com/)를 기반으로 연결 설정·기록 양식·초기 설정 스킬을 제공합니다. Obsidian은 선택 사항입니다.
 
-## 무엇인가
+**처음이라면 [시작하기](#시작하기)만 따라가세요. 이미 연결했다면 [이 세 문장으로 사용하기](#이-세-문장으로-사용하기)로 이동하세요.**
 
-AI는 대화가 끝나면 맥락을 잃고, 다른 AI는 그 대화를 모른다. 이 구성은 중요한 결정·근거·남은 일을 **노트로 저장**하고 다음 AI가 **그 노트를 다시 읽게** 한다. 전체 대화를 실시간으로 복제하지는 않는다
+## 무엇을 할 수 있나요?
 
-### 직접 만든 것과 외부 도구
-
-| 구분 | 내용 |
+| 상황 | AI-Vault로 하는 일 |
 |---|---|
-| **외부 도구 (이 저장소가 만들지 않음)** | [Basic Memory](https://docs.basicmemory.com/) — 노트 색인·검색·읽기·쓰기 MCP 도구 제공 (AGPL-3.0-or-later). Obsidian, OpenAI tunnel-client |
-| **이 저장소가 만든 것** | ① 현재 요약 / 상세 이력 / 인계 기록 구조와 양식 ② AI 공통 지침 ③ 설정 예시 ④ `vault_doctor.py` 사전 검사 ⑤ `merge_mcp_config.py` 안전한 설정 병합 ⑥ 가상 데모 Vault와 재현 시험 스크립트 |
+| 기획은 한 AI에서, 구현은 다른 AI에서 | 결정과 이유를 저장하고 다음 AI가 이어받기 |
+| 지난 대화를 다시 설명하기 번거로울 때 | 현재 요약부터 읽고 필요한 근거만 찾아보기 |
+| 어디까지 했는지 헷갈릴 때 | 완료·미검증·보류와 다음 할 일을 구분하기 |
 
-새 메모리 제품, MCP 서버, 검색 엔진, 동기화 서비스를 만든 것이 아니다. 현재 요약/상세 이력 구분은 노트 메타데이터와 운영 규칙이며 자동 요약·주기 정리 프로그램이 아니다. 자세한 분류는 [기능 상태와 책임 구분](docs/status.md)
+### 저장되는 기록 예시
 
-## 어떻게 동작하나
+*가상의 메모 앱 작업을 요약한 예시입니다. 실제 구현 결과가 아닙니다.*
 
-1. AI가 짧은 운영 규칙을 읽고 관련 주제의 현재 요약부터 조회한다
-2. 대화에서 확정한 결정·이유·근거·남은 일을 현재 요약에 갱신하고 긴 실행 이력은 별도 노트로 분리한다
-3. 다른 AI가 같은 노트의 최신 내용을 읽고 작업을 이어간다
+| 항목 | 기록 |
+|---|---|
+| 결정 | 첫 버전은 로컬 저장만 사용 — 일정 때문 |
+| 현재 상태 | 메모 목록·검색 구현으로 가정, 빌드·실사용은 미검증 |
+| 보류 | 클라우드 동기화 서버 선택 |
+| 다음 할 일 | 빌드와 실제 동작 확인 |
 
-저장하지 않은 내용을 다른 AI가 알고 있다고 가정하지 않는다. 특정 개발 프로젝트를 먼저 만들 필요도 없다 — `ai-vault`는 공용 보관함 이름이며 조사·학습·개인 결정에도 쓸 수 있다
+필요한 항목만 씁니다. 정해진 결정이나 보류 사항이 없다면 해당 항목은 생략합니다.
+[전체 데모 노트 보기](examples/demo-vault/Projects/Sample-Notes-App.md)
 
-```text
-Codex / Claude Code / Claude Desktop ── 로컬 MCP ─┐
-                                                ├─ Basic Memory ─ Obsidian Vault
-ChatGPT / dots ─ AI-Vault 플러그인 ─ 보안 터널 ───┘
-```
+## 시작하기
 
-## 누구에게 필요한가
-
-- Codex·Claude Code·ChatGPT 등을 번갈아 쓰며 “아까 정한 것”을 매번 다시 설명하는 사람
-- 결정과 근거를 노트로 남기고 AI가 이어서 읽게 하고 싶은 사람 (Obsidian 사용 여부는 무관)
-- 필요 없는 것: 클라우드 가입, 별도 서버, 데이터베이스 운영 (로컬 Basic Memory를 쓰며 별도 Basic Memory Cloud 가입은 하지 않는다)
-
-## 빠른 시작
-
-자세한 단계는 [빠른 시작](docs/quickstart.md). 요약
+준비물은 **Python 3.12 이상 · Basic Memory · MCP 연결을 지원하는 AI**입니다. 저장소의 보조 스크립트만 실행할 때는 Python 3.11 이상이면 됩니다.
 
 ```sh
-# 1. Basic Memory 설치 후 (공식 안내 참고), Vault 등록
-basic-memory project add ai-vault /ABSOLUTE/PATH/AI-Vault --local
-
-# 2. 사전 검사 (읽기 전용)
-python3 scripts/vault_doctor.py --vault /ABSOLUTE/PATH/AI-Vault --project ai-vault
-
-# 3. 클라이언트 설정에 병합 — 기본은 미리보기, 맞으면 --apply (백업 자동 생성, 반복 실행 안전)
-python3 scripts/merge_mcp_config.py --format codex-toml --target "$HOME/.codex/config.toml" \
-  --command "$(command -v basic-memory)" --project ai-vault
+git clone https://github.com/UiHyeon-Kim/ai-context-vault.git
+cd ai-context-vault
 ```
 
-스크립트는 **Python 3.11 이상**이 필요하다 (검증한 Mac의 기본 `/usr/bin/python3`는 3.9라 안내 메시지를 내고 멈춘다)
-Claude Code는 `claude mcp add --scope user …`, Codex는 `codex mcp add …` 공식 명령도 쓸 수 있다 — 클라이언트별 방법은 [빠른 시작](docs/quickstart.md#4-ai-클라이언트에-연결)
+1. **연결하기** — [설치·첫 연결 가이드](docs/quickstart.md)를 따라 데모 Vault를 등록하고 사용할 AI에 연결합니다.
+2. **규칙 한 번 등록하기** — [초기 설정 안내](docs/agent-setup.md)에서 AI·Vault·부를 이름·적용 범위·저장 방식을 고릅니다. 기본은 **요청할 때만 저장**입니다.
+3. **확인하기** — 새 채팅에서 “연결 시험 결과를 Vault에 기록해줘”라고 요청한 뒤, “방금 저장한 노트를 읽어줘”로 확인합니다.
 
-그다음 새 채팅에서 [연결 시험 문구](prompts/roundtrip-test.md)로 읽기 → 검색 → 기록 → 재조회를 확인한다
-먼저 연습하려면 [데모 Vault](examples/demo-vault/README.md)를 복사해 등록한다 (가상 데이터)
+초기 설정 스킬은 선택한 AI의 지침 파일이나 사용자 지침에 넣을 규칙을 준비합니다. 저장소를 받기만 해서는 연결이나 지침 등록이 완료되지 않습니다.
 
-> 지원 환경: **macOS**(직접 검증, Basic Memory 0.22.1). Linux·Windows는 지원 대상이 아니다. GitHub Actions에서 단위 테스트와 Basic Memory 연동 시험이 통과한 사실은 있으나 클라이언트 연결·실사용은 검증하지 않았다 ([지원 환경](docs/status.md#지원-환경))
+> 문서·양식은 Windows·macOS·Linux에서 사용할 수 있습니다. 연결 예시는 macOS 기준이며 Windows·Linux의 실제 앱 연결은 미검증입니다. [환경별 확인 범위](docs/status.md#지원-환경)
 
-## 사용 예시
+## 이 세 문장으로 사용하기
 
-작업 시작·재개
+연결과 규칙 등록을 마친 AI에 요청하세요.
 
-> AI-Vault(`ai-vault`)의 README를 먼저 읽고, Sample Notes App의 현재 요약부터 찾아 읽어줘. 상세 이력은 근거가 필요할 때만. 확정한 결정과 남은 일을 정리한 뒤 이어서 진행해줘
-
-결정 저장
-
-> 방금 확정한 결정·이유·보류 범위를 해당 현재 요약에 갱신하고, 사용자 결정과 AI 제안을 구별해줘. 마지막 수정 후 다시 읽어 저장을 확인해줘
-
-실제로 이렇게 기록된 모습은 [데모 현재 요약](examples/demo-vault/Projects/Sample-Notes-App.md)에서 볼 수 있다 — 현재 상태(구현/빌드/설치/실사용 구분), 사용자 결정과 AI 제안, 확인된 사실과 추정, 보류·금지 범위가 나뉘어 있다. 더 많은 문구는 [평소 사용하는 방법](docs/usage.md)
-
-## 설정
-
-| 무엇 | 어디에 |
+| 하고 싶은 일 | 이렇게 말하세요 |
 |---|---|
-| 이름(표시 이름 / 프로젝트 ID / 폴더 / 저장소)의 차이 | [이름 구분](docs/naming.md) — 문서는 표시 이름으로 `AI-Vault`를 씀. 짧게 바꾸고 싶으면 표시 이름만 바꾸고 ID `ai-vault`는 유지하길 권장 |
-| 로컬 MCP, ChatGPT 터널, 자동 실행 | [설정 방법](docs/setup.md) |
-| 예시 파일 | [`examples/`](examples) — `/ABSOLUTE/PATH`, `REPLACE_WITH_TUNNEL_ID`는 반드시 바꿔야 함. `vault_doctor.py`가 남은 자리 표시자를 찾아 준다 |
-| 백업·복구·업데이트·제거 | [유지보수](docs/maintenance.md) |
-| 노트 구조 | [현재 요약과 상세 이력](docs/context-structure.md), 양식은 [`templates/`](templates) |
+| 저장 | **“Vault에 기록해줘”** |
+| 재개 | **“Vault에서 메모 앱 작업 읽고 이어서 하자”** |
+| 인계 | **“다른 AI가 이어받게 Vault에 인계해줘”** |
 
-## 문제 해결
+CLI나 슬래시 명령이 아닌 자연어 요청입니다. AI마다 같은 Vault를 연결하고 규칙을 등록해야 합니다.
+**이름도 고를 수 있습니다.** 초기 설정에서 호칭을 `내 메모장`으로 정하면 “내 메모장에 기록해줘”로 사용합니다. 실제 프로젝트·폴더 이름은 바뀌지 않습니다. [이름 변경 안내](docs/naming.md)
+[사용 예시 더 보기](docs/usage.md)
 
-[오류 대응](docs/troubleshooting.md): 검색 0건, 도구 오류, 쓰기 응답 손실 후 저장 여부 확인(재조회 전에는 같은 쓰기를 반복하지 않음)
-설정이 의심되면 `vault_doctor.py`를 먼저 실행한다
+## 알아둘 점
 
-## 검증 현황
+- **저장한 노트만 공유합니다.** 전체 대화의 실시간 동기화나 자동 요약 서비스는 아닙니다.
+- **실제 저장을 확인하세요.** AI의 완료 답변뿐 아니라 노트를 다시 읽어 확인합니다. 초기 설정 스킬은 macOS의 Codex CLI·Claude Code 임시 환경에서 자동 발견·지침 등록·새 세션 저장까지 확인했습니다. 실제 사용자 프로필과 다른 앱의 같은 흐름은 미검증입니다.
+- **연결 방식은 AI마다 다릅니다.** MCP 지원 여부·인증·권한을 확인해야 합니다. 원격 연결은 Vault 컴퓨터와 연결 서비스가 실행 중이어야 합니다.
 
-| 검증 | 결과 |
-|---|---|
-| 단위 테스트 `python3 -m unittest discover -s tests` | 52개 통과 (macOS: Python 3.11·3.12·3.14·3.15) |
-| GitHub Actions 단위 테스트 (`.github/workflows/ci.yml`) | Ubuntu·Windows × Python 3.11·3.13, 4개 잡 모두 통과 (2026-10-22 첫 실행) |
-| GitHub Actions 연동 시험 (`integration` 잡) | Ubuntu·Windows + Basic Memory 0.22.1: 격리 재현 15/15, 오프라인 흉내 14+경고 1, MCP 11/11 (2026-10-22). 최신 버전 0.23.2는 실험적 잡으로 감시 |
-| 격리 환경 재현 `python3 scripts/demo_roundtrip.py` | 15/15 — 등록, 사전 검사, 한글 검색, 현재 요약/이력 필터, 읽기, 작성·수정·재조회, 백업 리허설 |
-| 네트워크 차단 시뮬레이션 `--offline` | 14 통과 + 경고 1 (기본 hybrid 검색이 0건, 텍스트 검색은 정상) |
-| MCP stdio 계층 `python3 scripts/mcp_stdio_check.py` | 11/11 |
-| 실제 설정·Vault 읽기 전용 점검 `vault_doctor.py` | 오류 0건 (수정 없음) |
-| 실제 ChatGPT/Codex/Claude 채팅 연결 | 작성자 환경 기록(재현 불가)만 있음, 2026-10 ([검증 현황](docs/verification.md)) |
+<details>
+<summary>연결 구조와 검증 범위 보기</summary>
 
-“MCP 호출이 된다”와 “채팅 속 AI가 지침을 따른다”는 서로 다른 검증이며, 후자는 이번 도구들로 보장하지 않는다
+```mermaid
+flowchart TB
+    ai["MCP 지원 AI"] --> connection["로컬 또는 원격 연결"]
+    connection --> memory["Basic Memory"]
+    memory <--> vault["Markdown Vault"]
+    editor["Obsidian · 텍스트 편집기"] <--> vault
+```
 
-## 한계
+Codex·Claude Code·Claude Desktop·ChatGPT·dots의 기존 연결 기록이 있습니다. 다른 AI는 개별 시험이 필요합니다.
+Basic Memory 1.0.0의 텍스트 검색·저장·수정·재조회를 macOS 임시 환경에서 확인했습니다. 온라인 의미 검색은 이번 검증에 포함하지 않았습니다. CI의 고정 연동 시험 대상은 Basic Memory 0.22.1이며 최신 버전은 실험적입니다.
+[1.0 호환성](docs/basic-memory-compatibility.md) · [초기 설정 검증](docs/setup-skill-verification.md) · [기존 연결 기록](docs/verification.md) · [실제 채팅 검증](docs/chat-verification.md) · [기능별 범위](docs/status.md)
 
-- 전체 대화를 동기화하지 않는다. **저장한 노트만** 공유된다
-- 지원 환경은 macOS뿐이다. Linux·Windows는 지원하지 않으며 해당 환경의 문제는 처리하지 않을 수 있다 (CI 통과 사실은 보장이 아니다)
-- AI가 지침을 항상 따른다는 보장이 없다. 중요한 인계는 저장 위치를 명시하고 재조회로 확인한다. 채팅에서 규칙을 따르는지 확인하는 절차는 [채팅 검증](docs/chat-verification.md)
-- 쓰기 안전은 서버 기능이 아니라 운영 규칙이다 — 확인 없는 `append` 반복은 중복되고, 없는 노트에 `append`하면 오류 없이 새 노트가 만들어지며, 편집 실패가 `isError` 없이 올 수 있다 (모두 시험으로 확인)
-- 새 Vault는 색인 전 검색이 비어 있을 수 있다. 첫 실행에서 Basic Memory가 임베딩 모델을 내려받으며, 받지 못하면 기본(hybrid) 검색이 비므로 `search_type=text`를 쓴다
-- ChatGPT·dots 사용 시 Vault가 있는 컴퓨터가 켜져 있고 터널이 동작해야 한다. 요금·플랜은 각 서비스 기준이다
-- dots의 자체 기억과 AI-Vault는 별개다. 여러 AI에 전달할 결과는 Vault에 명시적으로 저장해야 한다
-- 코드·ADR·백로그의 정본은 각 프로젝트 저장소다. Vault에는 요약과 링크만 둔다
+</details>
 
-## 라이선스
+## 필요할 때만 찾아보기
 
-[MIT](LICENSE) — 이 저장소의 파일에만 적용된다. Basic Memory(AGPL-3.0-or-later), OpenAI tunnel-client, Obsidian은 각자의 라이선스를 따르며 포함하지 않는다. 선택 근거는 [라이선스 선택과 근거](docs/license-options.md)
+[문제 해결](docs/troubleshooting.md) · [백업·복구](docs/maintenance.md) · [원격 연결·자동 실행](docs/setup.md) · [노트 구조·양식](docs/context-structure.md)
 
-## 문서 목록
+[편의 기능 구현·검증 현황](docs/status.md#편의-기능-현황)
 
-[빠른 시작](docs/quickstart.md) · [이름 구분](docs/naming.md) · [설정](docs/setup.md) · [사용법](docs/usage.md) · [노트 구조](docs/context-structure.md) · [오류 대응](docs/troubleshooting.md) · [채팅 검증](docs/chat-verification.md) · [유지보수](docs/maintenance.md) · [기능 상태](docs/status.md) · [검증 현황](docs/verification.md) · [라이선스](docs/license-options.md)
-[공통 지침](prompts/shared-context.md) · [연결 시험](prompts/roundtrip-test.md) · [인계 양식](templates/handoff.md) · [이력 양식](templates/history.md) · [Vault README 양식](templates/vault-readme.md)
+문제 제보·개선 제안은 [Issues](https://github.com/UiHyeon-Kim/ai-context-vault/issues) 또는 PR로 남겨 주세요. 사용 환경과 재현 방법을 적되 개인 노트·인증 정보는 제외해 주세요.
 
-## 이 저장소에 넣지 않는 것
-
-개인 노트 본문, 채팅 내보내기, 실행 로그, 인증 키, 실제 터널 ID와 사용자별 설정은 포함하지 않는다
-`.gitignore`는 실수 방지용이므로 올리기 전 실제 변경사항을 확인한다 (`vault_doctor.py`의 비밀값 검사도 보조로 쓸 수 있다)
-2026-10-06 개인 Vault 정리용 일회성 스크립트와 백업도 포함하지 않는다
-
-## 공식 참고 자료
-
-- [Basic Memory 로컬 설치](https://docs.basicmemory.com/start-here/quickstart-local)
-- [Basic Memory와 Obsidian](https://docs.basicmemory.com/integrations/obsidian/)
-- [OpenAI Secure MCP Tunnel](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels)
-- [ChatGPT 플러그인 연결](https://developers.openai.com/plugins/deploy/connect-chatgpt)
-- [dots 컴퓨터·앱 연결](https://learn.chatgpt.com/docs/dots/computers-and-apps)
-- [dots 작업·기억](https://learn.chatgpt.com/docs/dots/tasks-and-memory)
+[MIT](LICENSE) — 이 저장소에 적용됩니다. 외부 도구의 라이선스는 [별도 안내](docs/license-options.md)를 참고하세요.

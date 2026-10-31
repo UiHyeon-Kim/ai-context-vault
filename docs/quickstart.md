@@ -2,13 +2,13 @@
 
 목표: “README 읽기 → 검색 → 기록 → 재조회”가 되는 상태 만들기 (소요 시간은 측정하지 않았음)
 먼저 연습하려면 저장소의 [데모 Vault](../examples/demo-vault/README.md)를 복사해서 쓰면 됨 (가상 프로젝트, 개인 정보 없음)
-지원 환경: macOS + Basic Memory 0.22.1 (직접 검증). Linux·Windows는 지원 대상이 아니며 단위 테스트와 Basic Memory 연동 시험이 CI에서 통과한 사실만 있음 ([지원 환경](status.md#지원-환경))
+문서·양식은 OS와 무관함. 연결 과정은 macOS + Basic Memory 0.22.1에서 직접 검증했고 Linux·Windows는 단위 테스트와 Basic Memory 연동 CI 시험만 확인함. 클라이언트 연결·실사용은 미검증 ([지원 환경](status.md#지원-환경))
 아래 셸 예시는 macOS 셸(zsh·bash) 기준임
 
 ## 0. 준비물
 
 - **Python 3.11 이상**: `python3 --version`으로 확인. 검증한 Mac의 기본 `/usr/bin/python3`는 3.9라서(다른 macOS 버전은 확인하지 않음) 이 저장소의 스크립트가 “Python 3.11 이상이 필요합니다” 메시지로 멈춤. 이때는 3.11 이상 인터프리터(예: Homebrew의 `python3.12`)로 실행
-- [Basic Memory 설치](https://docs.basicmemory.com/start-here/quickstart-local) 완료, `basic-memory --version` 동작. 검증한 버전을 고정해 설치하려면 `uv tool install basic-memory==0.22.1` 또는 `pip install basic-memory==0.22.1` (둘 다 임시 환경에서 설치·실행을 확인했고, pip 방식은 CI에서도 확인). Basic Memory 패키지 자체는 Python 3.12 이상을 요구함(PyPI 메타데이터)
+- [Basic Memory 설치](https://docs.basicmemory.com/start-here/quickstart-local) 완료, `basic-memory --version` 동작. 이번 호환성 검증 버전은 **1.0.0**이며 고정 설치 예시는 `uv tool install basic-memory==1.0.0` 또는 `pip install basic-memory==1.0.0`임. 이번에는 이미 설치된 1.0.0을 사용했고 새 설치 명령은 실행하지 않았음. 0.22.1은 이전 설치·CI 검증 버전임. Basic Memory 패키지 자체는 Python 3.12 이상을 요구함(PyPI 메타데이터)
 - Markdown 폴더 하나 (Obsidian Vault여도 되고 새 폴더여도 됨). 기존 노트가 있으면 **먼저 폴더를 통째로 백업** ([백업·복구](maintenance.md))
 
 ## 1. 이름 정하기
@@ -69,18 +69,21 @@ Claude Desktop은 `--format claude-json`에 위 경로를 `--target`으로 지�
 
 ### 처음 검색이 0건일 때
 
+아래 설명은 Basic Memory 0.x에서 관찰한 동작임. 1.0은 등록 시 색인을 기다리며, 검색 인자는 `mode=text`·`filters`를 사용함. 임베딩 오류와 버전별 차이는 [1.0 호환성 검증](basic-memory-compatibility.md)을 참고함
+
 원인이 두 가지일 수 있음 (둘 다 격리 환경에서 재현함)
 
 1. **색인 전**: 새로 등록한 폴더는 색인되기 전까지 읽기·쓰기는 되어도 검색이 비어 있을 수 있음 → `basic-memory reindex --project ai-vault --full`을 한 번 실행하고 다시 검색
 2. **기본(hybrid) 검색이 임베딩 모델을 못 써서 비어 있음**: 이 버전은 의미 검색 구성요소가 있으면 기본 검색을 hybrid로 하고, 임베딩 모델을 받지 못한 환경(오프라인·차단)에서는 **텍스트 색인이 있어도 결과가 0건**이었음. 텍스트(`text`) 검색은 같은 조건에서 한글도 정상이었음 → 검색할 때 `search_type="text"`를 지정하거나, 환경변수 `BASIC_MEMORY_DEFAULT_SEARCH_TYPE=text`로 기본값을 바꿈. 환경변수는 CLI에서만 확인했음. MCP 서버로 실행될 때는 셸 환경변수를 물려받지 못할 수 있으므로 클라이언트의 MCP 서버 설정 `env`에 넣어야 함 (`codex mcp add --env KEY=VALUE`, Claude 설정 JSON의 `env` 키 — 이 경로는 실행하지 않아 미확인). 설정 파일의 `default_search_type`은 코드에 있으나 실행하지 않음
 
 임베딩에 관한 사실: 기본 설정은 로컬 실행(fastembed)이며 모델 이름이 `bge-small-en-v1.5`(영어 모델 이름)임. 첫 실행 때 모델 파일을 Hugging Face에서 내려받음. 노트 내용을 외부로 보내는지는 네트워크 트래픽을 측정하지 않아 확인하지 못했고, 기본 provider가 로컬이라는 설정만 확인함. 한글 의미 검색의 품질은 평가하지 않았음 (5개 노트의 데모에서는 관련 노트가 1순위였으나 표본이 작음)
-이 저장소의 현재 요약 검색 예시는 처음부터 `search_type: text`를 쓰므로 이 문제의 영향을 받지 않음 ([노트 구조](context-structure.md))
+이 저장소의 현재 요약 검색 예시는 처음부터 텍스트 검색(1.0: `mode: text`, 0.x: `search_type: text`)을 쓰므로 이 문제의 영향을 받지 않음 ([노트 구조](context-structure.md))
 
 ## 6. 평소 사용
 
+[초기 설정 안내](agent-setup.md)에서 AI·적용 범위·Vault·저장 방식을 선택하고 지속 지침에 등록하면 “Vault에 기록해줘”처럼 짧게 요청할 수 있음
 [평소 사용하는 방법](usage.md)의 문구로 재개·저장·인계를 요청함. 공통 지침은 [prompts/shared-context.md](../prompts/shared-context.md)
-수정 전에는 대상 노트가 실제로 있는지 먼저 읽어 확인함 — 없는 노트에 `append`하면 오류 없이 새 노트가 만들어지고, 편집 실패는 `isError` 없이 응답 본문(`# Edit Failed`)으로 옴 ([오류 대응](troubleshooting.md))
+수정 전에는 대상 노트가 실제로 있는지 먼저 읽어 확인함 — 0.x에서는 없는 노트에 `append`하면 새 노트가 만들어지고, 편집 실패가 오류 플래그 없이 올 수 있음. 1.0에서는 없는 노트의 편집을 거절함 ([오류 대응](troubleshooting.md))
 
 ## 7. 문제가 생기면
 

@@ -57,3 +57,5 @@
 이 정보만으로 원인을 좁힐 수 없다면 외부 클라이언트·터널·서비스 경계의 미확인 문제로 남김
 
 [연결 시험](../prompts/roundtrip-test.md)과 [기존 검증 범위](verification.md)를 함께 확인함
+
+Basic Memory 1.0의 도구 이름·인자와 오류 동작은 [호환성 검증](basic-memory-compatibility.md)을 참고한다. 위 0.22.1의 편집 동작을 1.0에 그대로 적용하지 않는다.

@@ -458,8 +458,43 @@ class VersionDriftTests(unittest.TestCase):
         self.assertFalse(mcs.error_flag(SimpleNamespace(is_error=False)))
         self.assertFalse(mcs.error_flag(SimpleNamespace()))
 
+    def test_1점0_CLI는_필터와_JSON_출력을_명시한다(self):
+        args = dr.tool_args("search-notes", ("한글", "--meta", "context_role=current"), True, "text")
+        self.assertEqual(args[0:2], ["search", "한글"])
+        self.assertEqual(json.loads(args[args.index("--filters") + 1]), {"context_role": "current"})
+        self.assertEqual(args[-3:], ["--mode", "text", "--json"])
+        self.assertEqual(dr.tool_args("edit-note", ("Inbox/노트", "--operation", "append"), True),
+                         ["edit", "Inbox/노트", "--command", "append", "--json"])
+        self.assertEqual(dr.tool_args("write-note", ("--folder", "Inbox"), True),
+                         ["write", "--directory", "Inbox", "--json"])
+
+    def test_1점0_MCP는_도구명과_필터와_편집_인자를_변환한다(self):
+        name, args = mcs.tool_call("search_notes", {"query": "한글", "search_type": "text",
+                                  "metadata_filters": {"context_role": "current"}, "page_size": 3}, True)
+        self.assertEqual(name, "bm_search")
+        self.assertEqual(args, {"query": "한글", "mode": "text", "filters": {"context_role": "current"},
+                                "page_size": 3, "output_format": "json"})
+        self.assertEqual(mcs.tool_call("edit_note", {"identifier": "노트", "operation": "append"}, True),
+                         ("bm_edit", {"identifier": "노트", "command": "append", "output_format": "json"}))
+
+    def test_구버전_도구_인자는_변경하지_않는다(self):
+        args = {"search_type": "text", "metadata_filters": {"context_role": "current"}}
+        self.assertEqual(mcs.tool_call("search_notes", args, False), ("search_notes", args))
+        self.assertEqual(dr.tool_args("search-notes", ("--meta", "context_role=current"), False),
+                         ["search-notes", "--meta", "context_role=current"])
+
 
 class IsolationTests(unittest.TestCase):
+    def test_임시_환경은_설정과_캐시를_격리하고_자동_업데이트를_끈다(self):
+        cfg, home = Path("temp-cfg"), Path("temp-home")
+        with mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": "/real-config", "XDG_CACHE_HOME": "/real-cache",
+                                          "HF_HOME": "/real-models", "BASIC_MEMORY_AUTO_UPDATE": "true"}):
+            for env in (dr.isolated_env(cfg, home), mcs.isolated_env(cfg, home)):
+                self.assertEqual(env["BASIC_MEMORY_AUTO_UPDATE"], "false")
+                self.assertEqual(env["XDG_CONFIG_HOME"], str(home / ".config"))
+                self.assertEqual(env["XDG_CACHE_HOME"], str(home / ".cache"))
+                self.assertEqual(env["HF_HOME"], str(home / ".cache" / "huggingface"))
+
     def test_isolated_env_drops_callers_basic_memory_settings(self):
         leaked = {"BASIC_MEMORY_DEFAULT_SEARCH_TYPE": "text", "BASIC_MEMORY_HOME": "/real/notes", "HF_HUB_OFFLINE": "1"}
         cfg, home = Path("cfg-dir"), Path("home-dir")

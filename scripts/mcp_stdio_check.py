@@ -13,13 +13,17 @@ basic-memory 실행 파일의 shebang이 가리키는 Python(uv/pipx 설치 기�
 from __future__ import annotations
 
 import asyncio
+import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
+
+from demo_roundtrip import isolated_env as demo_env
 
 ROOT = Path(__file__).resolve().parent.parent
 PROJECT = "demo-vault"
@@ -29,9 +33,7 @@ HISTORY_TITLE = "2026-01-05-검색-검증"
 
 def isolated_env(cfg: Path, home: Path) -> dict:
     """'격리' 실행용 환경. 호출자의 BASIC_MEMORY_*·HF_HUB_OFFLINE을 지우고 임시 HOME·설정 폴더만 가리키게 한다."""
-    env = {k: v for k, v in os.environ.items() if not k.startswith("BASIC_MEMORY_") and k != "HF_HUB_OFFLINE"}
-    env.update(HOME=str(home), USERPROFILE=str(home), BASIC_MEMORY_CONFIG_DIR=str(cfg), PYTHONIOENCODING="utf-8")
-    return env
+    return demo_env(cfg, home)
 
 
 def find_basic_memory_python() -> str | None:
@@ -68,7 +70,16 @@ def titles_of(result) -> list[str]:
         return []
 
 
-async def run_checks() -> int:
+def tool_call(name: str, args: dict, modern: bool) -> tuple[str, dict]:
+    """노출된 MCP 도구 목록에 따라 0.x 또는 1.0 호출을 구성한다."""
+    if not modern:
+        return name, dict(args)
+    names = {"search_notes": "bm_search", "read_note": "bm_read", "write_note": "bm_write", "edit_note": "bm_edit"}
+    renamed = {"search_type": "mode", "metadata_filters": "filters", "operation": "command"}
+    return names[name], {**{renamed.get(k, k): v for k, v in args.items()}, "output_format": "json"}
+
+
+async def run_checks(offline: bool = False) -> int:
     from mcp import ClientSession, StdioServerParameters
     from mcp.client.stdio import stdio_client
 
@@ -86,17 +97,29 @@ async def run_checks() -> int:
         shutil.copytree(ROOT / "examples" / "demo-vault", vault)
         home.mkdir()
         env = isolated_env(cfg, home)
-        subprocess.run([exe, "project", "add", PROJECT, str(vault), "--local"], env=env, capture_output=True, check=True)
-        subprocess.run([exe, "reindex", "--project", PROJECT, "--full"], env=env, capture_output=True)
+        if offline:
+            env["HF_HUB_OFFLINE"] = "1"
+        version = subprocess.run([exe, "--version"], env=env, capture_output=True, text=True, check=True, timeout=60)
+        match = re.search(r"version:\s*(\d+)\.", version.stdout)
+        if not match:
+            raise RuntimeError("Basic Memory 버전을 확인할 수 없음")
+        print(version.stdout.strip())
+        modern = int(match.group(1)) >= 1
+        subprocess.run([exe, "project", "add", PROJECT, str(vault), "--local", *(["--no-wait"] if modern else [])],
+                       env=env, capture_output=True, check=True, timeout=600)
+        subprocess.run([exe, "reindex", "--project", PROJECT, "--full"], env=env, capture_output=True, timeout=600)
         params = StdioServerParameters(command=exe, args=["mcp", "--project", PROJECT], env=env)
         async with stdio_client(params) as (r, w):
             async with ClientSession(r, w) as s:
                 await s.initialize()
                 names = {t.name for t in (await s.list_tools()).tools}
-                need = {"search_notes", "read_note", "write_note", "edit_note"}
+                modern = "bm_read" in names
+                need = ({"bm_search", "bm_read", "bm_write", "bm_edit"} if modern else
+                        {"search_notes", "read_note", "write_note", "edit_note"})
                 step("도구 목록 노출", need <= names, f"필수 4종 {'모두 있음' if need <= names else '누락: ' + str(need - names)} / 전체 {len(names)}개")
 
                 async def call(tool, args):
+                    tool, args = tool_call(tool, args, modern)
                     return await s.call_tool(tool, {**args, "project": PROJECT})
 
                 t = titles_of(await call("search_notes", {"query": "클라우드", "search_type": "text", "output_format": "json"}))
@@ -107,38 +130,47 @@ async def run_checks() -> int:
                      "Sample-Notes-App" in t and HISTORY_TITLE not in t and len(t) <= 3, f"결과 {t}")
                 t = titles_of(await call("search_notes", {"metadata_filters": {"context_role": "history"}, "output_format": "json"}))
                 step("이력 필터(context_role=history): 이력만", t == [HISTORY_TITLE], f"결과 {t}")
-                t = titles_of(await call("search_notes", {"query": "동기화", "output_format": "json"}))
-                step("기본 검색(search_type 미지정, hybrid) 결과 있음", bool(t), f"{len(t)}건" if t else "0건 — 임베딩을 쓸 수 없는 환경이면 비는 것이 정상. search_type=text 사용",
+                default_result = await call("search_notes", {"query": "동기화", "output_format": "json"})
+                t = titles_of(default_result)
+                step("기본 검색(search_type 미지정, hybrid) 결과 있음", bool(t) and not error_flag(default_result),
+                     f"{len(t)}건" if t else ("서버 오류 응답" if error_flag(default_result) else "0건") + " — 임베딩을 못 쓰는 환경에서는 text 검색으로 대체",
                      warn_if_not=True)
                 res = await call("read_note", {"identifier": "Projects/Sample-Notes-App"})
                 step("현재 요약 읽기(현재 상태·보류·금지 범위)", all(k in text_of(res) for k in ("현재 상태", "보류·금지 범위")))
-                await call("write_note", {"title": "MCP 테스트 노트", "directory": "Inbox", "content": f"# t\n\n본문 {MARK}-A\n"})
+                written = await call("write_note", {"title": "MCP 테스트 노트", "directory": "Inbox", "content": f"# t\n\n본문 {MARK}-A\n"})
                 res = await call("read_note", {"identifier": "Inbox/MCP 테스트 노트"})
-                step("작성 후 재조회", text_of(res).count(f"{MARK}-A") == 1)
-                await call("edit_note", {"identifier": "Inbox/MCP 테스트 노트", "operation": "append", "content": f"\n수정 {MARK}-B\n"})
+                step("작성 후 재조회", not error_flag(written) and not error_flag(res) and text_of(res).count(f"{MARK}-A") == 1)
+                edited = await call("edit_note", {"identifier": "Inbox/MCP 테스트 노트", "operation": "append", "content": f"\n수정 {MARK}-B\n"})
                 res = await call("read_note", {"identifier": "Inbox/MCP 테스트 노트"})
                 tx = text_of(res)
-                step("수정 후 재조회(기존 보존)", tx.count(f"{MARK}-A") == 1 and tx.count(f"{MARK}-B") == 1)
+                step("수정 후 재조회(기존 보존)", not error_flag(edited) and not error_flag(res) and tx.count(f"{MARK}-A") == 1 and tx.count(f"{MARK}-B") == 1)
                 res = await call("edit_note", {"identifier": "Inbox/MCP 테스트 노트", "operation": "find_replace",
                                                "find_text": "존재하지 않는 문구", "content": "x"})
-                step("없는 문자열의 find_replace는 실패 응답(본문 'Edit Failed')", error_flag(res) or "Edit Failed" in text_of(res),
-                     f"isError={error_flag(res)} — 0.22.1·0.23.2에서 isError=False로 오므로 응답 본문과 재조회로 판단해야 함")
+                step("없는 문자열의 find_replace는 실패 응답", error_flag(res) or "Edit Failed" in text_of(res),
+                     f"isError={error_flag(res)} — 구버전은 오류 플래그 없이 실패 본문을 반환하기도 함")
                 res = await call("read_note", {"identifier": "Inbox/MCP 테스트 노트"})
                 step("실패한 수정이 기존 내용을 바꾸지 않음", text_of(res).count(f"{MARK}-A") == 1 and text_of(res).count(f"{MARK}-B") == 1)
                 # 알려진 주의 동작: 없는 노트에 append하면 오류 없이 새 노트가 만들어진다 (경로 오타가 조용히 새 노트가 됨)
                 res = await call("edit_note", {"identifier": "Inbox/오타난-경로", "operation": "append", "content": "x"})
                 made = await call("read_note", {"identifier": "Inbox/오타난-경로"})
-                step("없는 노트에 append하면 새 노트가 만들어짐(주의: 먼저 존재 확인)", "Created note" in text_of(res) and "x" in text_of(made),
-                     f"isError={error_flag(res)}", warn_if_not=True)
+                if modern:
+                    step("없는 노트에 append 거부·파일 미생성(1.0)", error_flag(res) and error_flag(made)
+                         and not (vault / "Inbox" / "오타난-경로.md").exists())
+                else:
+                    step("없는 노트에 append하면 새 노트가 만들어짐(0.x: 먼저 존재 확인)", "Created note" in text_of(res) and "x" in text_of(made),
+                         f"isError={error_flag(res)}", warn_if_not=True)
     except Exception as e:  # noqa: BLE001 - 진단 출력용
         step("MCP 세션", False, f"{type(e).__name__}: {e}")
     finally:
-        shutil.rmtree(tmp, ignore_errors=True)
+        shutil.rmtree(tmp)  # 정리 실패를 성공으로 숨기지 않는다.
     print(f"\n통과 {results.count('PASS')} / 경고 {results.count('WARN')} / 실패 {results.count('FAIL')} (총 {len(results)})")
     return 1 if "FAIL" in results else 0
 
 
 def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--offline", action="store_true", help="임베딩 모델을 받을 수 없는 환경 흉내")
+    args = ap.parse_args()
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors="replace")
@@ -151,7 +183,7 @@ def main() -> int:
             return subprocess.call([py, __file__, *sys.argv[1:]], env={**os.environ, "AICV_REEXEC": "1"})
         print("mcp 패키지를 찾을 수 없음. Basic Memory가 설치된 Python으로 직접 실행하세요: <basic-memory의 python> scripts/mcp_stdio_check.py")
         return 2
-    return asyncio.run(run_checks())
+    return asyncio.run(run_checks(offline=args.offline))
 
 
 if __name__ == "__main__":

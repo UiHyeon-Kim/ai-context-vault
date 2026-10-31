@@ -42,7 +42,9 @@ def isolated_env(cfg: Path, home: Path, offline: bool = False) -> dict:
     """'격리' 실행용 환경. 호출자의 BASIC_MEMORY_*(기본 검색 유형, 홈 폴더 등)와 HF_HUB_OFFLINE을 지워
     사용자 설정이 시험 결과에 섞이지 않게 하고, 임시 HOME·설정 폴더만 가리키게 한다."""
     env = {k: v for k, v in os.environ.items() if not k.startswith("BASIC_MEMORY_") and k != "HF_HUB_OFFLINE"}
-    env.update(HOME=str(home), USERPROFILE=str(home), BASIC_MEMORY_CONFIG_DIR=str(cfg), PYTHONIOENCODING="utf-8")
+    env.update(HOME=str(home), USERPROFILE=str(home), BASIC_MEMORY_CONFIG_DIR=str(cfg), PYTHONIOENCODING="utf-8",
+               XDG_CONFIG_HOME=str(home / ".config"), XDG_CACHE_HOME=str(home / ".cache"),
+               HF_HOME=str(home / ".cache" / "huggingface"), BASIC_MEMORY_AUTO_UPDATE="false")
     if offline:
         env["HF_HUB_OFFLINE"] = "1"
     return env
@@ -78,6 +80,25 @@ def titles(proc) -> list[str]:
     return [x.get("title", "") for x in parse_json(proc.stdout).get("results", [])]
 
 
+def tool_args(name: str, args: tuple[str, ...], modern: bool, search_type: str | None = None) -> list[str]:
+    """1.0의 CLI 이름·옵션·명시적 JSON 출력을 사용하고 0.x 호출도 보존한다."""
+    if not modern:
+        return [name, *args]
+    names = {"search-notes": "search", "read-note": "read", "write-note": "write", "edit-note": "edit"}
+    renamed = {"--folder": "--directory", "--operation": "--command"}
+    converted = []
+    items = iter(args)
+    for item in items:
+        if item == "--meta":
+            key, value = next(items).split("=", 1)
+            converted.extend(["--filters", json.dumps({key: value})])
+        else:
+            converted.append(renamed.get(item, item))
+    if search_type:
+        converted.extend(["--mode", search_type])
+    return [names[name], *converted, "--json"]
+
+
 def main(argv=None) -> int:
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
@@ -95,6 +116,7 @@ def main(argv=None) -> int:
     home.mkdir()
     env = isolated_env(cfg, home, a.offline)
     results: list[tuple[str, str]] = []
+    modern = False
 
     def run(*args: str, extra_env: dict | None = None) -> subprocess.CompletedProcess:
         return subprocess.run([exe, *args], env={**env, **(extra_env or {})}, capture_output=True, text=True,
@@ -102,7 +124,7 @@ def main(argv=None) -> int:
 
     def tool(name: str, *args: str, search_type: str | None = None) -> subprocess.CompletedProcess:
         extra = {"BASIC_MEMORY_DEFAULT_SEARCH_TYPE": search_type} if search_type else None
-        return run("tool", name, "--project", PROJECT, "--local", *args, extra_env=extra)
+        return run("tool", *tool_args(name, args, modern, search_type), "--project", PROJECT, "--local", extra_env=extra)
 
     def step(name: str, ok: bool, detail: str = "", warn_if_not: bool = False) -> None:
         status = "PASS" if ok else ("WARN" if warn_if_not else "FAIL")
@@ -110,7 +132,13 @@ def main(argv=None) -> int:
         print(f"[{status}] {len(results)}. {name}" + (f" — {detail}" if detail else ""))
 
     try:
-        r = run("project", "add", PROJECT, str(vault), "--local")
+        version = run("--version")
+        match = re.search(r"version:\s*(\d+)\.", version.stdout)
+        if version.returncode != 0 or not match:
+            raise RuntimeError("Basic Memory 버전을 확인할 수 없음")
+        modern = int(match.group(1)) >= 1
+        print(version.stdout.strip())
+        r = run("project", "add", PROJECT, str(vault), "--local", *(["--no-wait"] if modern else []))
         step("프로젝트 등록(임시 설정)", r.returncode == 0, r.stdout.strip().splitlines()[-1] if r.stdout.strip() else r.stderr[-200:])
         d = subprocess.run([sys.executable, str(ROOT / "scripts" / "vault_doctor.py"), "--vault", str(vault), "--project", PROJECT,
                             "--binary", exe, "--config-dir", str(cfg)], env=env, capture_output=True, text=True, encoding="utf-8", errors="replace")
@@ -130,8 +158,10 @@ def main(argv=None) -> int:
         hist = titles(tool("search-notes", "--meta", "context_role=history", search_type="text"))
         step("이력 필터(context_role=history): 이력만", hist == [HISTORY_TITLE], f"결과 {hist}")
 
-        dflt = titles(tool("search-notes", "동기화"))  # 기본 검색 = 의미 검색이 켜져 있으면 hybrid
-        step("기본(hybrid) 검색 결과 있음", bool(dflt), f"결과 {len(dflt)}건" if dflt else "0건 — 임베딩을 쓸 수 없으면 비는 것이 정상. search_type=text로 대체",
+        default_result = tool("search-notes", "동기화")
+        dflt = titles(default_result)  # 기본 검색 = 의미 검색이 켜져 있으면 hybrid
+        step("기본(hybrid) 검색 결과 있음", bool(dflt) and default_result.returncode == 0,
+             f"결과 {len(dflt)}건" if dflt else (f"오류 응답(종료 코드 {default_result.returncode})" if default_result.returncode else "0건") + " — 임베딩을 못 쓰는 환경에서는 text 검색으로 대체",
              warn_if_not=True)
 
         rd = tool("read-note", "Projects/Sample-Notes-App")
@@ -170,7 +200,7 @@ def main(argv=None) -> int:
         if a.keep:
             print(f"임시 폴더 유지: {tmp}")
         else:
-            shutil.rmtree(tmp, ignore_errors=True)
+            shutil.rmtree(tmp)  # 정리 실패를 성공으로 숨기지 않는다.
 
     bad = [n for n, s in results if s == "FAIL"]
     warn = [n for n, s in results if s == "WARN"]

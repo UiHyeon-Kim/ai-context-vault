@@ -40,24 +40,26 @@ AI-Vault/
 이 이름은 이 구성에서 정한 사용자 메타데이터이며 Basic Memory가 자동으로 분류해 주는 예약 기능이 아님
 `context_role`은 읽는 역할, `verification`은 확인 수준이므로 현재 요약도 미검증일 수 있음
 
-현재 요약을 우선 찾는 `search_notes` 인자 예시
+현재 요약을 우선 찾는 Basic Memory 1.0.0의 `bm_search` 인자 예시
 
 ```json
 {
   "project": "ai-vault",
   "query": "관심 도구",
-  "search_type": "text",
-  "metadata_filters": {"context_role": "current"},
+  "mode": "text",
+  "filters": {"context_role": "current"},
   "page_size": 3,
   "output_format": "json"
 }
 ```
 
-`search_type`을 `text`로 고정한 이유: 이 버전의 기본 검색은 의미 검색 구성요소가 있으면 hybrid인데, 임베딩 모델을 쓸 수 없는 환경에서는 텍스트 색인이 있어도 결과가 0건이었음. 텍스트 검색은 같은 조건에서 한글 접두어(`동기` → `동기화`)까지 찾았음
+0.x의 `search_notes`에서는 `mode` 대신 `search_type`, `filters` 대신 `metadata_filters`를 사용함. 연결된 서버의 도구 목록·인자 스키마를 먼저 확인함 ([버전별 검증](basic-memory-compatibility.md))
+
+텍스트 검색을 명시한 이유: 임베딩 모델을 쓸 수 없는 환경에서는 기본 검색이 비거나 오류를 반환했음. 텍스트 검색은 같은 조건에서 한글 접두어(`동기` → `동기화`)까지 찾았음
 결과가 없거나 부족하면 필터를 제거하고 기존 일반 노트·제목·경로로 다시 찾음
 경로가 확실하면 검색을 반복하지 않고 해당 요약을 바로 읽음
 `page_size`는 결과 수이며 노트 본문 길이를 제한하는 설정이 아님
-검증 환경의 `read_note`는 전체 본문을 반환했으므로 제목·노트를 먼저 좁혀야 함
+0.x의 `read_note`는 전체 본문을 반환했음. 1.0의 `bm_read`는 줄·섹션 범위 지정도 제공하므로 필요한 범위만 읽을 수 있지만, 이번 시험은 전체 노트 재조회만 확인했음
 
 ## 갱신 순서
 
