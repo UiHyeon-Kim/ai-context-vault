@@ -602,9 +602,9 @@ class RepoConsistencyTests(unittest.TestCase):
 
     def test_ci_installs_the_basic_memory_version_the_docs_say_was_verified(self):
         ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
-        pinned = set(re.findall(r'bm: "(\d+\.\d+\.\d+)"', ci))
-        self.assertEqual(len(pinned), 1, pinned)
-        version = pinned.pop()
+        pinned = re.findall(r'\{ os: ubuntu-latest, bm: "(\d+\.\d+\.\d+)", experimental: false \}', ci)
+        self.assertEqual(pinned, ["1.0.0"], "필수 Ubuntu 연동 테스트는 Basic Memory 1.0.0")
+        version = pinned[0]
         for rel in ("README.md", "docs/status.md"):
             self.assertIn(f"Basic Memory {version}", (ROOT / rel).read_text(encoding="utf-8"), rel)
 
