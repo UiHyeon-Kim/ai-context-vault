@@ -2,7 +2,7 @@ name: tests
 
 # 단위 테스트와 격리된 Basic Memory MCP 연동 테스트를 실행한다.
 # 주간 최신 버전 점검은 호환성 회귀를 감지할 뿐, 패키지나 사용자의 연결을 자동 업데이트하지 않는다.
-# macOS 실제 ChatGPT 터널 연결은 이 CI가 검증하지 않는다.
+# 임베딩 모델 다운로드·의미 검색 품질과 macOS의 실제 ChatGPT 터널 연결은 이 CI가 검증하지 않는다.
 on:
   push:
     branches: [main]
@@ -62,11 +62,8 @@ jobs:
           if [ "${{ matrix.bm }}" = "latest" ]; then spec="basic-memory"; else spec="basic-memory==${{ matrix.bm }}"; fi
           python -m pip install "$spec"
           basic-memory --version
-      - name: 격리 재현 (데모 Vault)
-        run: python scripts/demo_roundtrip.py
-      - name: 격리 재현 (임베딩 모델을 받을 수 없는 환경 흉내)
-        if: ${{ !cancelled() }}
+      - name: 격리 재현 (텍스트 검색·기록, 오프라인)
         run: python scripts/demo_roundtrip.py --offline
-      - name: MCP stdio 계층
+      - name: MCP stdio 계층 (오프라인)
         if: ${{ !cancelled() }}
-        run: python scripts/mcp_stdio_check.py
+        run: python scripts/mcp_stdio_check.py --offline
