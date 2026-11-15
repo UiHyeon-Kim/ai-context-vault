@@ -1,12 +1,14 @@
 name: tests
 
-# 표준 라이브러리 단위 테스트만 실행한다. Basic Memory 설치나 실제 MCP 호출은 하지 않는다
-# (그 시험은 scripts/demo_roundtrip.py, scripts/mcp_stdio_check.py를 로컬에서 실행).
-# macOS는 비공개 저장소에서 러너 사용량 배수가 커서 제외했고 로컬(macOS)에서 직접 검증했다.
+# 단위 테스트와 격리된 Basic Memory MCP 연동 테스트를 실행한다.
+# 주간 최신 버전 점검은 호환성 회귀를 감지할 뿐, 패키지나 사용자의 연결을 자동 업데이트하지 않는다.
+# macOS 실제 ChatGPT 터널 연결은 이 CI가 검증하지 않는다.
 on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: "0 1 * * 1" # 월요일 10:00 KST, 최신 버전 호환성 점검
 
 permissions:
   contents: read
@@ -35,17 +37,18 @@ jobs:
 
   integration:
     # Basic Memory를 실제로 설치해 scripts/demo_roundtrip.py와 scripts/mcp_stdio_check.py를 실행한다.
-    # 검증한 버전(0.22.1, Ubuntu)은 필수다. Windows와 최신 버전은 실험적이라 실패해도 워크플로 전체를 실패로 만들지 않는다
-    # (결과는 잡 로그와 docs/status.md에 사실대로 기록한다).
+    # 1.0.0(Ubuntu)을 필수 계약으로 검증한다. 구버전 및 PR의 latest는 참고 시험이다.
+    # 주간 예약 실행에서 latest 실패는 워크플로 실패로 보고해 호환성 변화를 알린다.
     name: integration (${{ matrix.os }}, basic-memory ${{ matrix.bm }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
-    continue-on-error: ${{ matrix.experimental }}
+    continue-on-error: ${{ matrix.experimental && !(github.event_name == 'schedule' && matrix.bm == 'latest') }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-latest, bm: "0.22.1", experimental: false }
+          - { os: ubuntu-latest, bm: "1.0.0", experimental: false }
+          - { os: ubuntu-latest, bm: "0.22.1", experimental: true }
           - { os: windows-latest, bm: "0.22.1", experimental: true }
           - { os: ubuntu-latest, bm: "latest", experimental: true }
     steps:

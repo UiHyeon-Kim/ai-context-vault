@@ -477,6 +477,17 @@ class VersionDriftTests(unittest.TestCase):
         self.assertEqual(mcs.tool_call("edit_note", {"identifier": "노트", "operation": "append"}, True),
                          ("bm_edit", {"identifier": "노트", "command": "append", "output_format": "json"}))
 
+    def test_MCP_도구계약을_설치_버전과_대조한다(self):
+        old = {"search_notes", "read_note", "write_note", "edit_note"}
+        new = {"bm_search", "bm_read", "bm_write", "bm_edit"}
+        self.assertTrue(mcs.tool_contract(0, old)[0])
+        self.assertTrue(mcs.tool_contract(1, new)[0])
+        self.assertFalse(mcs.tool_contract(1, old)[0])
+        self.assertIn("bm_read", mcs.tool_contract(1, old)[1])
+        self.assertFalse(mcs.tool_contract(1, old | new)[0])
+        self.assertIn("구형 도구", mcs.tool_contract(1, old | new)[1])
+        self.assertFalse(mcs.tool_contract(0, new)[0])
+
     def test_구버전_도구_인자는_변경하지_않는다(self):
         args = {"search_type": "text", "metadata_filters": {"context_role": "current"}}
         self.assertEqual(mcs.tool_call("search_notes", args, False), ("search_notes", args))

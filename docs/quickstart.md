@@ -104,7 +104,16 @@ macOS 경로는 `~/Library/Application Support/Claude/claude_desktop_config.json
 <details>
 <summary>ChatGPT·dots</summary>
 
-[원격 연결 안내](setup.md)의 터널 절차를 따르세요. 이번 수정에서는 원격 연결을 재검증하지 않았습니다.
+[원격 연결 안내](setup.md)의 터널 절차를 따르세요. ChatGPT 연결에서 Basic Memory 1.0을 사용하면 `bm_read`, `bm_search` 등 `bm_*` 도구가 보여야 합니다.
+구형 `read_note` 등이 계속 표시되거나 `Unknown tool` 오류가 나면 플러그인 도구 목록을 새로고침하고 새 채팅에서 확인하세요.
+로컬 버전 확인과 격리 MCP 검사는 아래 명령으로 할 수 있으며 **원격 터널·ChatGPT 등록 정보의 정상 동작을 보장하지는 않습니다.**
+
+```sh
+basic-memory --version
+python3 scripts/mcp_stdio_check.py --offline
+```
+
+[도구명 불일치 해결 절차](troubleshooting.md#basic-memory-10-전환-후-unknown-tool)
 
 </details>
 
