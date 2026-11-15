@@ -477,6 +477,17 @@ class VersionDriftTests(unittest.TestCase):
         self.assertEqual(mcs.tool_call("edit_note", {"identifier": "노트", "operation": "append"}, True),
                          ("bm_edit", {"identifier": "노트", "command": "append", "output_format": "json"}))
 
+    def test_MCP_도구계약을_설치_버전과_대조한다(self):
+        old = {"search_notes", "read_note", "write_note", "edit_note"}
+        new = {"bm_search", "bm_read", "bm_write", "bm_edit"}
+        self.assertTrue(mcs.tool_contract(0, old)[0])
+        self.assertTrue(mcs.tool_contract(1, new)[0])
+        self.assertFalse(mcs.tool_contract(1, old)[0])
+        self.assertIn("bm_read", mcs.tool_contract(1, old)[1])
+        self.assertFalse(mcs.tool_contract(1, old | new)[0])
+        self.assertIn("구형 도구", mcs.tool_contract(1, old | new)[1])
+        self.assertFalse(mcs.tool_contract(0, new)[0])
+
     def test_구버전_도구_인자는_변경하지_않는다(self):
         args = {"search_type": "text", "metadata_filters": {"context_role": "current"}}
         self.assertEqual(mcs.tool_call("search_notes", args, False), ("search_notes", args))
@@ -591,9 +602,9 @@ class RepoConsistencyTests(unittest.TestCase):
 
     def test_ci_installs_the_basic_memory_version_the_docs_say_was_verified(self):
         ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
-        pinned = set(re.findall(r'bm: "(\d+\.\d+\.\d+)"', ci))
-        self.assertEqual(len(pinned), 1, pinned)
-        version = pinned.pop()
+        pinned = re.findall(r'\{ os: ubuntu-latest, bm: "(\d+\.\d+\.\d+)", experimental: false \}', ci)
+        self.assertEqual(pinned, ["1.0.0"], "필수 Ubuntu 연동 테스트는 Basic Memory 1.0.0")
+        version = pinned[0]
         for rel in ("README.md", "docs/status.md"):
             self.assertIn(f"Basic Memory {version}", (ROOT / rel).read_text(encoding="utf-8"), rel)
 

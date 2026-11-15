@@ -6,7 +6,8 @@ basic-memory 실행 파일의 shebang이 가리키는 Python(uv/pipx 설치 기�
 찾지 못하면 그 Python을 직접 지정해 실행한다:  <basic-memory의 python> scripts/mcp_stdio_check.py
 
 격리: 임시 HOME / BASIC_MEMORY_CONFIG_DIR / Vault 사본만 쓰고 호출자의 BASIC_MEMORY_* 환경변수는 지운다. 실제 설정은 읽지도 쓰지도 않는다.
-문서화된 현재 요약 검색 레시피(search_type=text, metadata_filters, page_size=3)도 여기서 확인한다.
+문서화된 현재 요약 검색 레시피(0.x: search_type/metadata_filters, 1.0: mode/filters)도 여기서 확인한다.
+설치된 Basic Memory 버전과 실제 MCP 도구 목록이 다르면 실패한다. ChatGPT에 캐시된 플러그인 스키마는 별도 확인해야 한다.
 이것은 'MCP 호출이 된다'는 확인이며 채팅 속 AI가 지침을 따르는지는 별개다.
 종료 코드: FAIL이 있으면 1, 2는 mcp를 쓸 수 없음. WARN(기본 검색이 빈 경우)은 실패가 아니다.
 """
@@ -70,6 +71,21 @@ def titles_of(result) -> list[str]:
         return []
 
 
+def tool_contract(major: int, exposed: set[str]) -> tuple[bool, str]:
+    """설치 버전과 실제 MCP 도구 이름을 대조한다. 서버 도구 목록만 검사하며 클라이언트 캐시는 알 수 없다."""
+    legacy = {"search_notes", "read_note", "write_note", "edit_note"}
+    current = {"bm_search", "bm_read", "bm_write", "bm_edit"}
+    expected = current if major >= 1 else legacy
+    missing = expected - exposed
+    obsolete = (legacy & exposed) if major >= 1 else set()
+    problems = []
+    if missing:
+        problems.append("필수 도구 누락: " + ", ".join(sorted(missing)))
+    if obsolete:
+        problems.append("1.0 서버에 구형 도구 노출: " + ", ".join(sorted(obsolete)))
+    return not problems, "; ".join(problems) if problems else f"필수 4종 확인 / 전체 {len(exposed)}개"
+
+
 def tool_call(name: str, args: dict, modern: bool) -> tuple[str, dict]:
     """노출된 MCP 도구 목록에 따라 0.x 또는 1.0 호출을 구성한다."""
     if not modern:
@@ -104,7 +120,8 @@ async def run_checks(offline: bool = False) -> int:
         if not match:
             raise RuntimeError("Basic Memory 버전을 확인할 수 없음")
         print(version.stdout.strip())
-        modern = int(match.group(1)) >= 1
+        major = int(match.group(1))
+        modern = major >= 1
         subprocess.run([exe, "project", "add", PROJECT, str(vault), "--local", *(["--no-wait"] if modern else [])],
                        env=env, capture_output=True, check=True, timeout=600)
         subprocess.run([exe, "reindex", "--project", PROJECT, "--full"], env=env, capture_output=True, timeout=600)
@@ -113,10 +130,10 @@ async def run_checks(offline: bool = False) -> int:
             async with ClientSession(r, w) as s:
                 await s.initialize()
                 names = {t.name for t in (await s.list_tools()).tools}
-                modern = "bm_read" in names
-                need = ({"bm_search", "bm_read", "bm_write", "bm_edit"} if modern else
-                        {"search_notes", "read_note", "write_note", "edit_note"})
-                step("도구 목록 노출", need <= names, f"필수 4종 {'모두 있음' if need <= names else '누락: ' + str(need - names)} / 전체 {len(names)}개")
+                contract_ok, contract_detail = tool_contract(major, names)
+                step("MCP 도구 계약(설치된 Basic Memory 버전 기준)", contract_ok, contract_detail)
+                if not contract_ok:
+                    raise RuntimeError("설치된 Basic Memory 버전과 MCP 도구 목록 불일치")
 
                 async def call(tool, args):
                     tool, args = tool_call(tool, args, modern)
